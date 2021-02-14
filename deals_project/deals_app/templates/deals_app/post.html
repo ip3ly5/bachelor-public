@@ -1,0 +1,977 @@
+{% extends 'base.html' %}
+{% block title %}food4thought - {{post.title}}{% endblock title %}
+{% block content %}
+<div class="main">
+
+    <div class="quickButtons">
+        {% if user == post.user %}
+        <div>
+            <a href="{% url 'deals_app:edit' post.slug %}">
+                <span>Edit Post</span>
+                <i class="fas fa-edit"></i>
+            </a>
+        </div>
+        <div>
+            <a href="{% url 'deals_app:delete' post.slug %}">
+                <span>Delete post</span>
+                <i class="fas fa-trash"></i>
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="content">
+        <div class="post">
+            <div class="leftContainer">
+                <div class="carouselContainer">
+                    <div class="carouselHeader">
+                        <div class="carouselPreview">
+                            <img class="carouselPreviewImg" src="{{post.thumbnail.url}}">
+                        </div>
+                    </div>
+                    <div class="carouselFooter">
+                        <div id="thumbnailLeft"><i class="fas fa-chevron-left"></i></div>
+                        <div class="carouselThumbnailContainer">
+                            {% for postImage in postImages %}
+                            <div class="carouselThumbnail"><img src="{{postImage.image.url}}"></div>
+                            {% endfor %}
+                        </div>
+                        <div id="thumbnailRight"><i class="fas fa-chevron-right"></i></div>
+                    </div>
+                </div>
+            </div>
+            <div class="middleContainer">
+                <div class="authorHeader">
+                    <div class="postProfileImage"><img src="{{profileImage.url}}"></div>
+                    <div class="postAuthor"><a href="{% url 'profile_app:profile' post.user.id %}">{{post.user}}</a>
+                        <span>is giving away...</span>
+                    </div>
+                </div>
+                <div class="postHeader">
+                    <div class="postTitle">
+                        <div>{{post.title}}</div>
+                        <span class="postTimestamp">- {{post.when_published}}</span>
+                    </div>
+                    <div class="postTag">{{post.category}}</div>
+                    {% if post.frozen_to != null %}
+                    <div class="postTag">Awaiting collection</div>
+                    {% endif %}
+                </div>
+                <div class="postBody">
+                    {{post.description}}
+
+                    <div class="postExpiration">
+                        Collect by:
+                        {{post.expiration_date}}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="mapContainer">
+            <div id="map">
+            </div>
+        </div>
+        <div class="line"></div>
+        {% if post.frozen_to != null %}
+        <div class="frozenInfo"><i class="fas fa-info-circle"></i><span>Post owner has chosen a user for
+                collection.<span></span></div>
+        {% endif %}
+        <div class="commentsSection">
+            {% if userCanComment %}
+            <div class="createComment">
+                <div class="commentHeader">
+                    <div class="commentProfileImage"><img src="{{user.profile.image.url}}"></div>
+                    <div class="commentAuthor"><a href="{% url 'profile_app:profile' user.id %}">{{user}}</a></div>
+                </div>
+                <div class="commentBody">
+                    <div class="inputContainer">
+                        <textarea class="commentField"
+                            placeholder="Show your interest and make the food go further!"></textarea>
+                    </div>
+                    <div id="inputOptions">
+                        <div id="privateCheckContainer">
+                            <input type="checkbox" id="privateCheck" name="privateCheck">
+                            <label for="privateCheck" id="privateCheckLabel">Private comment</label>
+                        </div>
+                        <div class="submitComment">Submit</div>
+                    </div>
+                </div>
+                <div class="commentFooter">
+                </div>
+            </div>
+            {% endif %}
+            {% if user.is_authenticated != True %}
+            <div class="commentHeader">
+                <a id="loginLink" href="{% url 'login_app:login' %}">Log in to comment</a>
+            </div>
+            {% endif %}
+            <div class="subHeaderComments">Comments(<span id="commentCount">{{commentCount}}</span>)
+                <span id="privateCountContainer"> | <span id="privateCount">{{privateCommentCount}}</span>
+                    private</span>
+            </div>
+            <div class="commentsContainer">
+                {% for commentquote in commentquotes reversed %}
+                {% if commentquote.comment.private is False or commentquote.comment.user == user or commentquote.quote.quotee.user == user or post.user == user %}
+                <div class="comment" id="{{commentquote.comment.id}}">
+                    <div class="commentHeader">
+                        <div class="commentProfileImage"><img src="{{commentquote.comment.user.profile.image.url}}">
+                        </div>
+                        <div class="commentAuthor" id="author-{{commentquote.comment.id}}"><a
+                                href="{% url 'profile_app:profile' commentquote.comment.user.id %}">{{commentquote.comment.user}}</a>
+                        </div>
+                        <div class="commentTimestamp" id="timestamp-{{commentquote.comment.id}}">
+                            {{commentquote.comment.date_created}}
+                        </div>
+                        {% if commentquote.comment.private %}
+                        <span class="commentPrivate" id="private-{{commentquote.comment.id}}">(Private)</span>
+                        {% endif %}
+                    </div>
+                    <div class="commentBody">
+                        {% if commentquote.quote %}
+                        <div class="quoteContainer">
+                            <i class="fas fa-quote-left"></i>
+                            <div class="quote">
+                                <div class="quoteHeader">
+                                    <div class="quoteAuthor">{{commentquote.quote.quotee.user}}</div>
+                                    <div class="quoteTimestamp">{{commentquote.quote.quotee.date_created}}</div>
+                                </div>
+                                <div class="quoteBody">
+                                    {{commentquote.quote.quotee.body}}
+                                    <i class="fas fa-quote-right"></i>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        <div id="body-{{commentquote.comment.id}}">
+                            {{commentquote.comment.body}}
+                        </div>
+                        <div class="commentFooter">
+                            <div class="commentFooterL">
+                                {% if user == post.user and user != commentquote.comment.user %}
+                                <div>
+                                    <form action="{% url 'deals_app:edit' post.slug %}" method="post">
+                                        {% csrf_token %}
+                                        {% if post.frozen_to == commentquote.comment.user %}
+                                        <input type="hidden" name="toggleFrozen" value="False" />
+                                        <button class="toggleFrozen grey">Cancel user as collection</button>
+                                        {% else %}
+                                        <input type="hidden" name="toggleFrozen"
+                                            value="{{commentquote.comment.user.id}}" />
+                                        <button class="toggleFrozen">Select user for collection</button>
+                                        {% endif %}
+                                    </form>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="commentFooterR">
+                                <div><i class="fas fa-reply" data-id="{{commentquote.comment.id}}"></i></div>
+                                {% if user == commentquote.comment.user %}
+                                <div><i class="fas fa-trash-alt" data-id="{{commentquote.comment.id}}"></i></div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{{ post.id|json_script:"postId" }}
+{{ post.lng|json_script:"postLng" }}
+{{ post.lat|json_script:"postLat" }}
+
+<script>
+    function getCookie(name) {
+        var cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            var cookies = document.cookie.split(';');
+            for (var i = 0; i < cookies.length; i++) {
+                var cookie = cookies[i].trim();
+                // Does this cookie string begin with the name we want?
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    var csrftoken = getCookie('csrftoken');
+
+    let thumbnails = document.getElementsByClassName("carouselThumbnail");
+
+    thumbnails[0].children[0].classList.add('active');
+
+    let marginVar = 0;
+
+    let marginAmount = 4;
+
+    let marginMax = -marginAmount * thumbnails.length;
+    marginMax = marginMax;
+
+    function moveThumbnails(direction) {
+        if (direction == 'left') {
+            if (marginVar == 0) {
+                return;
+            }
+            marginVar += 12;
+            thumbnails[0].style.marginLeft = `${marginVar}em`;
+        }
+
+        if (direction == 'right') {
+            if (marginVar < marginMax + 12 || marginVar == marginMax + 12) {
+                return
+            }
+            marginVar -= 12;
+            thumbnails[0].style.marginLeft = `${marginVar}em`;
+        }
+    }
+
+    let thumbnailLeft = document.getElementById('thumbnailLeft')
+    let thumbnailRight = document.getElementById('thumbnailRight')
+
+    let thumbnailContainer = document.querySelector('.carouselThumbnailContainer')
+    let carouselPreviewImg = document.querySelector('.carouselPreviewImg')
+
+    thumbnailLeft.addEventListener('click', () => {
+        moveThumbnails('left')
+    })
+
+    thumbnailRight.addEventListener('click', () => {
+        moveThumbnails('right')
+    })
+
+    thumbnailContainer.addEventListener('click', () => {
+        console.log(event.target.classList)
+        if (event.target.classList.contains("carouselThumbnailContainer")) {
+            return;
+        }
+        document.querySelector('.active').classList.remove('active');
+        event.target.classList.toggle('active');
+
+        carouselPreviewImg.src = event.target.src;
+
+    });
+
+
+
+    const lng = JSON.parse(document.getElementById('postLng').textContent);
+    const lat = JSON.parse(document.getElementById('postLat').textContent);
+
+    mapboxgl.accessToken = 'pk.eyJ1IjoiaXAzbHk1IiwiYSI6ImNrMGM1ZXg2bjB5cXgzYm53bHAyem5ldmkifQ.LM4FfJrdUcagfWYHuDUjww';
+    var map = new mapboxgl.Map({
+        container: 'map', // container id
+        style: 'mapbox://styles/mapbox/streets-v11', // style URL
+        center: [lng, lat], // starting position [lng, lat]
+        zoom: 12 // starting zoom
+    });
+
+    map.on('load', function () {
+        map.resize();
+    });
+
+    let coordinates = {
+        "lng": lng,
+        "lat": lat
+    }
+    let el = document.createElement('a');
+    el.className = `marker`
+    el.innerHTML = `<i class="fas fa-map-marker"></i>`;
+    new mapboxgl.Marker(el).setLngLat(coordinates).addTo(map);
+
+</script>
+
+
+{% if user.is_authenticated %}
+<script>
+    // COMMENT
+    const postId = JSON.parse(document.getElementById('postId').textContent);
+    console.log(postId)
+    let commentReplyButtons = document.querySelectorAll('.fa-reply')
+    let inputField = document.querySelector('.inputContainer')
+    let commentsContainer = document.querySelector('.commentsContainer')
+    let commentId, quoteTemplate, quoteAuthor, quoteTimestamp
+
+    let commentCounter = document.querySelector('#commentCount').innerHTML
+    commentCounter = parseInt(commentCounter)
+    let privateCounter = document.querySelector('#privateCount').innerHTML
+    privateCounter = parseInt(privateCounter)
+
+    commentsContainer.addEventListener('click', (e) => {
+        // if quoting add template to input field
+        if (e.target.matches('.fa-reply')) {
+            commentId = event.target.getAttribute('data-id')
+            let commentParent = document.getElementById(`${commentId}`)
+            quoteAuthor = document.getElementById(`author-${commentId}`).innerText
+            quoteTimestamp = document.getElementById(`timestamp-${commentId}`).innerText
+            quoteBody = document.getElementById(`body-${commentId}`).innerText
+            quotePrivate = document.getElementById(`private-${commentId}`)
+            let privateCheck = document.querySelector('#privateCheck')
+
+            if (quotePrivate != null) {
+                privateCheck.checked = true;
+                privateCheck.disabled = true;
+            }
+
+            quoteTemplate =
+                `<div id="${commentId}" class="quoting quoteContainer">
+                    <i class="fas fa-quote-left"></i>
+                    <div class="quote">
+                        <div class="quoteHeader">
+                            <div class="quoteAuthor"><a href="{% url 'profile_app:profile' user.id %}">${quoteAuthor}</a></div>
+                            <div class="quoteTimestamp">${quoteTimestamp}</div>
+                            ${ quotePrivate == null ? '' : '<span class="commentPrivate" id="private-{{commentquote.comment.id}}">(Private)</span> '}
+                            <i class="cancelQuote fas fa-times"></i>
+                        </div>
+                        <div class="quoteBody">
+                            ${quoteBody}
+                            <i class="fas fa-quote-right"></i>
+                        </div>
+                    </div>
+                </div>
+                <textarea class="commentField"></textarea>`;
+
+            inputField.innerHTML = quoteTemplate;
+        }
+
+        // if deleting
+        if (e.target.matches('.fa-trash-alt')) {
+            let commentPk = event.target.getAttribute('data-id')
+            let commentParent = document.getElementById(`${commentPk}`)
+
+            fetch(`${postId}/comment/delete`, {
+                method: "DELETE",
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken,
+                },
+
+                //make sure to serialize your JSON body
+                body: JSON.stringify({
+                    "pk": commentPk
+                })
+            })
+                .then((response) => {
+                    console.log(response)
+                    commentParent.remove();
+                })
+        }
+
+    });
+
+    // Comment submit
+    let submitComment = document.querySelector('.submitComment')
+    console.log('382', submitComment)
+
+    submitComment.addEventListener('click', () => {
+        console.log('x')
+        let commentField = document.querySelector('.commentField')
+        let quoteElem = document.querySelector('.quoting')
+
+        // if quote
+        if (quoteElem) {
+            fetch(`${postId}/comment`, {
+                method: "POST",
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken,
+                },
+                body: JSON.stringify({
+                    "body": commentField.value,
+                    "quotee": commentId,
+                    "private": (quotePrivate != null || privateCheck.checked) ? true : false
+                })
+            })
+                .then((response) => {
+
+                    let res = response.json()
+                    return res
+
+                }).then(function (data) {
+
+                    commentsContainer.insertAdjacentHTML("afterbegin",
+                        `<div class="comment" id="${data.pk}">
+                            <div class="commentHeader">
+                                <div class="commentProfileImage"><img src="{{user.profile.image.url}}"></div>
+                                <div class="commentAuthor">{{user}}</div>
+                                <div class="commentTimestamp">{% now "SHORT_DATETIME_FORMAT" %}</div>
+                                ${(quotePrivate != null || privateCheck.checked) ? `<span class="commentPrivate">(Private)</span>` : ''}  
+                            </div>
+                            <div class="commentBody">
+                                <div class="quoteContainer">
+                                    <i class="fas fa-quote-left"></i>
+                                    <div class="quote">
+                                        <div class="quoteHeader">
+                                            <div class="quoteAuthor">${quoteAuthor}</div>
+                                            <div class="quoteTimestamp">${quoteTimestamp}</div>
+                                        </div>
+                                        <div class="quoteBody">
+                                            ${quoteBody}
+                                            <i class="fas fa-quote-right"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                                ${commentField.value}
+                                <div class="commentFooter">
+                                    <div class="commentFooterL">
+                                    </div>
+                                    <div class="commentFooterR">
+                                        <div><i class="fas fa-reply"></i></div>
+                                        <div><i class="fas fa-trash-alt" data-id=${data.pk}></i></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>`)
+                    document.querySelector('#commentCount').innerHTML = commentCounter += 1;
+                    privateCheck.checked ? document.querySelector('#privateCount').innerHTML = privateCounter += 1 : null;
+                    commentField.value = '';
+                })
+            // if regular comment
+        } else {
+            fetch(`${postId}/comment`, {
+                method: "POST",
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken,
+                },
+
+                //make sure to serialize your JSON body
+                body: JSON.stringify({
+                    "body": commentField.value,
+                    "private": privateCheck.checked
+                })
+            })
+                .then((response) => {
+                    let res = response.json()
+                    return res
+
+                }).then(function (data) {
+
+                    commentsContainer.insertAdjacentHTML("afterbegin",
+                        `<div class="comment" id="${data.pk}">
+                            <div class="commentHeader">
+                                <div class="commentProfileImage"><img src="{{user.profile.image.url}}"></div>
+                                <div class="commentAuthor"><a href="{% url 'profile_app:profile' user.id %}">{{user}}</a></div>
+                                <div class="commentTimestamp">{% now "SHORT_DATETIME_FORMAT" %}</div>
+                                ${privateCheck.checked ? `<span class="commentPrivate">(Private)</span>` : ''}                               
+                            </div>
+                            <div class="commentBody">
+                                ${commentField.value}
+                                <div class="commentFooter">
+                                    <div class="commentFooterL">
+                                    </div>
+                                    <div class="commentFooterR">
+                                        <div><i class="fas fa-trash-alt" data-id="${data.pk}"></i></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>`)
+                    document.querySelector('#commentCount').innerHTML = commentCounter += 1;
+                    privateCheck.checked ? document.querySelector('#privateCount').innerHTML = privateCounter += 1 : null;
+                    commentField.value = '';
+                })
+        }
+    })
+
+    inputField.addEventListener('click', () => {
+        console.log(inputField.children)
+        if (event.target.classList.contains('cancelQuote') && inputField.children[0].classList.contains('quoteContainer')) {
+            inputField.children[0].remove();
+        }
+    })
+
+    // Comment Delete //
+
+</script>
+
+{% endif %}
+
+<style>
+    textarea {
+        resize: none;
+    }
+
+    .main .quickButtons,
+    .subHeaderComments {
+        color: #4ED530;
+        height: 4.5em;
+        align-items: center;
+        display: flex;
+        font-weight: 500;
+    }
+
+    .main .quickButtons span,
+    .main .quickButtons i {
+        margin-right: .5em;
+        cursor: pointer;
+        color: #4ED530;
+    }
+
+    .main .quickButtons div {
+        margin-right: 2em;
+    }
+
+    a {
+        text-decoration: none;
+        color: unset;
+    }
+
+    a:hover {
+        text-decoration: underline;
+    }
+
+    .content {
+        padding: 2em;
+        flex-grow: 1;
+        background: white;
+        box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+
+    }
+
+    .post {
+        display: flex;
+        flex-direction: row;
+    }
+
+    .postAuthor span {
+        color: #545454;
+        text-decoration: none !important;
+    }
+
+    .middleContainer {
+        display: flex;
+        flex-direction: column;
+        padding: 0 2em;
+        flex: 1;
+    }
+
+    .postHeader {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        margin: .5em 0;
+        color: #545454;
+    }
+
+    .postHeader>div {
+        display: inline-flex;
+        margin-bottom: .2em;
+    }
+
+    .postTitle {
+        font-size: 1.1em;
+        display: flex;
+        align-items: center;
+    }
+
+    .postTitle div {
+        text-decoration: underline;
+        margin-right: .2em;
+    }
+
+    .postBody {
+        display: flex;
+        flex-grow: 1;
+        flex-direction: column;
+        width: 100%;
+        font-weight: 300;
+    }
+
+    .postExpiration {
+        margin-top: auto;
+        text-align: right;
+        font-weight: 500;
+        color: #545454;
+    }
+
+    .line {
+        border-bottom: 1px solid #bdbdbd;
+        margin: 2em 0;
+    }
+
+    .rightContainer {
+        display: flex;
+        align-items: center;
+    }
+
+    /* vote component */
+
+    .voteComponent {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        color: #545454;
+    }
+
+    .upVote,
+    .downVote {
+        align-items: center;
+        display: flex;
+        flex-direction: column;
+        cursor: pointer;
+    }
+
+    .upVote.color1,
+    .upVote:hover {
+        color: #9DC86C;
+    }
+
+    .downVote.color-1,
+    .downVote:hover {
+        color: #4ED530;
+    }
+
+    .upVote div,
+    .downVote div {
+        white-space: nowrap;
+        font-size: .6em;
+        padding: .2em;
+        width: 100%;
+    }
+
+    .postScore {
+        padding: 0 .25em;
+    }
+
+    .authorHeader {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .authorHeader div {
+        margin: 0 .25em;
+    }
+
+
+    /*comments*/
+
+    .comment {
+        margin: 1em 0;
+        padding-bottom: .5em;
+    }
+
+    .commentHeader,
+    .quoteHeader {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .commentHeader div {
+        margin: 0 .25em;
+    }
+
+    .commentProfileImage:before,
+    .postProfileImage:before {
+        content: "";
+        display: block;
+        padding-top: 100%;
+    }
+
+    .commentProfileImage,
+    .postProfileImage {
+        position: relative;
+        width: 3em;
+        overflow: hidden;
+        border-radius: 50%;
+    }
+
+    .commentProfileImage img,
+    .postProfileImage img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        object-fit: cover;
+        width: 100%;
+        height: 100%;
+    }
+
+    .commentAuthor {
+        color: #4ED530;
+    }
+
+    .commentTimestamp {
+        font-size: .7em;
+        color: #9D9D9C;
+    }
+
+    .commentBody {
+        font-weight: 300;
+        margin-left: 3.75em;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .commentBody .inputContainer {
+        display: flex;
+        flex-direction: column;
+        border: 1px solid #dadada;
+        box-shadow: 0px 1px 5px 0px #DCDDDC;
+        padding: 1em;
+        border-radius: 1em;
+    }
+
+    .commentBody .inputContainer textarea {
+        border: none;
+        font-weight: 500;
+        color: #555454;
+        flex: 1;
+    }
+
+    .commentFooter {
+        margin-top: .5em;
+        font-weight: 500;
+        color: #545454;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .commentFooterR {
+        display: flex;
+        justify-content: space-around;
+    }
+
+    .commentFooterR div {
+        margin: 0 .5em;
+    }
+
+    .addUseful {
+        color: #545454;
+        display: flex;
+    }
+
+    .addUseful i {
+        margin-right: .5em;
+    }
+
+    .quoteContainer {
+        margin-bottom: 1em;
+        color: #9D9D9C;
+    }
+
+    .quoting {
+        border: 1px #9D9D9C solid;
+        padding: .8em 0 .8em .8em;
+        border-radius: .5em;
+    }
+
+    .quote {
+        padding: 0 1em;
+    }
+
+    .quoteHeader div {
+        margin-right: .25em;
+    }
+
+    .quoteHeader i {
+        margin-left: auto;
+    }
+
+    .quoteAuthor {
+        font-weight: 500;
+    }
+
+    .quoteTimestamp {
+        font-size: .7em;
+    }
+
+    .quoteBody {
+        color: #9D9D9C;
+    }
+
+    .fa-quote-right,
+    .fa-quote-left {
+        font-size: .5em;
+        vertical-align: top;
+    }
+
+    .fa-quote-left {
+        position: absolute;
+    }
+
+    .fa-quote-right {
+        margin: 0 .5em;
+    }
+
+    .submitComment {
+        margin-left: 1em;
+        padding: 1em;
+        background: #4ED530;
+        color: white;
+        font-weight: 500;
+        cursor: pointer;
+    }
+
+    /*carousel */
+
+
+    .carouselContainer {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .carouselPreview {
+        display: flex;
+        justify-content: center;
+        box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+    }
+
+    .carouselPreview img {
+        height: 15em;
+        width: 15em;
+        object-fit: contain;
+    }
+
+    .carouselThumbnailContainer {
+        display: flex;
+        flex-direction: row;
+        overflow: hidden;
+        width: 12em;
+        height: 4em;
+        margin: 0 1em;
+        box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+    }
+
+    .carouselThumbnail img {
+        width: 4em;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .carouselThumbnail {
+        transition: all .7s ease;
+    }
+
+    .active {
+        border: solid 2px rgb(56, 56, 56);
+        box-sizing: border-box;
+    }
+
+    .carouselHeader,
+    .carouselFooter {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-around;
+        align-items: center;
+        cursor: pointer;
+    }
+
+    .carouselFooter {
+        margin-top: 1em;
+        color: #545454;
+    }
+
+    /* MAPBOX */
+
+    #map {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+    }
+
+    .mapContentContainer {
+        display: flex;
+        height: calc(100vh - 5em);
+
+    }
+
+    .mapContainer {
+        margin-top: 2em;
+        position: relative;
+        width: 100% !important;
+        height: 20em;
+        flex: 1;
+        display: flex;
+    }
+
+    .marker {
+        opacity: 0.9;
+        color: #4ED530 !important;
+        font-size: 3.5em;
+    }
+
+    .commentPrivate {
+        font-size: 0.7em;
+        margin-left: 0.2em;
+        color: #4ED530;
+    }
+
+    #inputOptions {
+        display: flex;
+        margin-top: 1em;
+        justify-content: flex-end;
+        align-items: flex-start;
+    }
+
+    #privateCheckContainer {
+        display: flex;
+        align-items: center;
+    }
+
+    #privateCheck {
+        margin: 0;
+    }
+
+    #privateCheckLabel {
+        margin-left: 0.2em;
+        color: #9D9D9C;
+    }
+
+    #privateCountContainer {
+        opacity: 0.5;
+        margin-left: 0.5em;
+        font-size: 0.9em;
+    }
+
+    #loginLink {
+        color: #b5b5b5;
+        font-weight: 500;
+        text-decoration: none;
+    }
+
+    .toggleFrozen {
+        margin: 1em auto;
+        text-align: center;
+        padding: 1em;
+        background: #4ED530;
+        color: white;
+        font-weight: 500;
+        cursor: pointer;
+        width: 100%;
+        font-size: 0.7em;
+
+    }
+
+    .toggleFrozen.grey {
+        background: grey !important;
+    }
+
+    .frozenInfo {
+        display: flex;
+        text-align: center;
+        background: #A8D5E2;
+        border: 1px #1D70A2 solid;
+        color: #1D70A2;
+        border-radius: 1em;
+        padding: 1em;
+        margin-bottom: 1.5em;
+    }
+
+    .frozenInfo span {
+        margin-left: 1em;
+    }
+</style>
+
+{% endblock content %}

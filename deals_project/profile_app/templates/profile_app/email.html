@@ -1,0 +1,7 @@
+<div>
+    Your subscriptions have been busy! Here is a list of the latest things they have uploaded!
+    {% for post in posts %}
+        <div>Name: {{post.name}}</div>
+        <div>Summary: {{post.summary}}</div>
+    {% endfor %}
+</div>

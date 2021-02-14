@@ -1,0 +1,651 @@
+{% extends 'base.html' %}
+{% block title %}food4thought - {{currentCategory}}{% endblock title %}
+{% block content %}
+<div class="mapContentContainer">
+  <div class="mapContainer">
+    <div id="map">
+    </div>
+  </div>
+  <div class="main">
+    <div class="categoryTitle">
+      {{currentCategory}}
+    </div>
+    <div class="quickButtons">
+      <div>
+        <span class="active-{{order}} expired">
+          <a href="{% url 'deals_app:base' base 'expired' '0' currentLocation %}">Awaiting
+            Collection</a>
+          <a class="cancelButton" href="{% url 'deals_app:base' base 'newest' '0' currentLocation %}">
+            <i class="fas fa-times-circle"></i>
+          </a>
+        </span>
+      </div>
+      <div>
+        <span class="active-{{order}} today">
+          <a href="{% url 'deals_app:base' base 'today' '0' currentLocation %}">Today</a>
+          <a class="cancelButton" href="{% url 'deals_app:base' base 'nofilter' '0' currentLocation %}">
+            <i class="fas fa-times-circle"></i>
+          </a>
+        </span>
+      </div>
+      <div class="genericDropdown">
+        <a class="{% if currentLocation != 0 %} activePostcodeDropdown {% endif %}" href="">
+          <span>Postcode</span>
+          <i class="fa fa-angle-down" aria-hidden="true"></i>
+        </a>
+        <div class="genericDropdownContent">
+          {% for postcode in postcodes %}
+          {% ifequal postcode.code currentLocation %}
+          <span class="activePostcode genericDropdownItem">
+            <a href="{% url 'deals_app:base' base order '0' postcode.code %}">{{postcode.code}} -
+              {{postcode.text}}</a>
+            <a class="cancelButton" href="{% url 'deals_app:base' base order '0' '0' %}">
+              <i class="fas fa-times-circle"></i>
+            </a>
+          </span>
+          {% else %}
+          <a class="genericDropdownItem"
+            href="{% url 'deals_app:base' base order '0' postcode.code %}">{{postcode.code}} -
+            {{postcode.text}}</a>
+          {% endifequal  %}
+          {% endfor %}
+        </div>
+      </div>
+      {% if user.is_authenticated %}
+      <div>
+        <a href="{% url 'deals_app:addPost' %}">
+          <span>Add post</span>
+          <i class="fas fa-plus-circle"></i>
+        </a>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="content" id="posts-container">
+      <div id="posts">
+        {% for post in posts %}
+        <div class="postAnchor postExpired-{% if post.frozen_to != null %}True{% endif %}" id="mapId-{{post.id}}">
+          <div class="post postId-{{post.id}}">
+            <div class="postImage">
+              <a href="{% url 'deals_app:post' post.slug %}">
+                <img src="{{post.thumbnail.url}}">
+              </a>
+            </div>
+            <div class="postLeft">
+              <div class="postTitle">
+                <a href="{% url 'deals_app:post' post.slug %}">{{post.title}}</a>
+                <div class="postTimestamp">- {{post.when_published}}</div>
+              </div>
+              <div class="postSecondaryDetails">
+                <div class="postAuthor">
+                  <a href="{% url 'profile_app:profile' post.user.id %}">{{post.user}}</a></div>
+                <div class="postExpiredDate">Collect by: {{post.expiration_date}}</div>
+              </div>
+            </div>
+            <div class="postRight">
+              <div class="postRightContainer">
+                <div class="postCommentCount"><i class="fas fa-comment"></i> {{post.num_comments}}</div>
+                <div class="postCategory postTag">{{post.category}}</div>
+                {% if post.frozen_to != null %}
+                <div class="postCategory postTag">Awaiting Collection</div>
+                {% endif %}
+                <div class="postPostcode">{{post.postcode.text}} - {{post.postcode.code}} <i
+                    class="flyToMap fas fa-map-marked" data-lng="{{post.lng}}" data-lat="{{post.lat}}"
+                    data-id="{{post.id}}"></i></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="pageButtonsContainer">
+      {% if currentPage != 0 %}
+      <div class="pageButton"><a href="{% url 'deals_app:base' base order '0' currentLocation %}">1</a></div>
+      {% endif %}
+      <div class="pageButton center">
+        {% if currentPage != 0 %}
+        <div>
+          <a href="{% url 'deals_app:base' base order previousPage currentLocation %}">
+            <i class="fas fa-caret-left"></i>
+          </a>
+        </div>
+        {% endif %}
+        <div class="currentPage">Page {{currentPage|add:"+1"}}</div>
+        {% if currentPage != lastPage %}
+        <div>
+          <a href="{% url 'deals_app:base' base order nextPage currentLocation %}">
+            <i class="fas fa-caret-right"></i>
+          </a>
+        </div>
+        {% endif %}
+      </div>
+      {% if currentPage != lastPage %}
+      <div class="pageButton">
+        <a href="{% url 'deals_app:base' base order lastPage %} ">{{lastPage|add:"+1"}}</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+</div>
+
+{{ jsonPosts|json_script:'jsonPosts' }}
+{{ currentLocation|json_script:'location' }}
+{{ initialMapLocationLng|json_script:'initialMapLocationLng' }}
+{{ initialMapLocationLat|json_script:'initialMapLocationLat' }}
+<script>
+
+  function getCookie(name) {
+    var cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      var cookies = document.cookie.split(';');
+      for (var i = 0; i < cookies.length; i++) {
+        var cookie = cookies[i].trim();
+        // Does this cookie string begin with the name we want?
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  var csrftoken = getCookie('csrftoken');
+
+  document.addEventListener('DOMContentLoaded', function () {
+
+    let voteContainers = document.querySelectorAll('.voteComponent')
+    Array.from(voteContainers).forEach(voteContainer => {
+
+      voteContainer.addEventListener('click', (e) => {
+        let pk = voteContainer.dataset.id
+        let voteOption = e.target.dataset.vote
+        console.log(voteOption)
+        console.log(voteContainer.dataset.votestatus)
+        if (Number(voteOption) != Number(voteContainer.dataset.votestatus)) {
+
+          fetch(`/post/${pk}/vote`, {
+            method: "POST",
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'X-CSRFToken': csrftoken,
+            },
+
+            //make sure to serialize your JSON body
+            body: JSON.stringify({
+              "vote": voteOption
+            })
+          })
+            .then((response) => {
+              return response.clone().json()
+            }).then(function (data) {
+              console.log(data.count)
+              voteContainer.children[2].innerHTML = data.count
+              if (voteOption == 1) {
+                voteContainer.dataset.votestatus = 1
+                voteContainer.children[0].classList.remove('color-1')
+                voteContainer.children[4].classList.add('color1')
+              } else {
+                voteContainer.dataset.votestatus = -1
+                voteContainer.children[0].classList.add('color-1')
+                voteContainer.children[4].classList.remove('color1')
+
+              }
+
+            })
+        }
+
+        else {
+          fetch(`/post/${pk}/vote`, {
+            method: "DELETE",
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'X-CSRFToken': csrftoken,
+            }
+          })
+            .then((response) => {
+              return response.clone().json()
+
+            }).then(function (data) {
+              console.log(data)
+              console.log(data.count)
+
+              voteContainer.children[2].innerHTML = data.count
+
+              voteContainer.dataset.votestatus = "";
+              voteContainer.children[0].classList.remove('color-1')
+              voteContainer.children[4].classList.remove('color1')
+            })
+        }
+      })
+    });
+
+  })
+
+
+  let postsArray = JSON.parse(JSON.parse(document.querySelector('#jsonPosts').textContent));
+  let postcodeLocation = JSON.parse(document.querySelector('#location').textContent);
+  let initialMapLocationLng = JSON.parse(document.querySelector('#initialMapLocationLng').textContent);
+  let initialMapLocationLat = JSON.parse(document.querySelector('#initialMapLocationLat').textContent);
+
+  let locationLng,
+    locationLat
+
+  let locationFilter = document.querySelectorAll('.flyToMap');
+  if (postcodeLocation == 0) {
+    locationLng = initialMapLocationLng
+    locationLat = initialMapLocationLat
+  } else if (Array.from(locationFilter).length > 0) {
+    let locationElem = Array.from(locationFilter)[0]
+    locationLng = locationElem.dataset.lng
+    locationLat = locationElem.dataset.lat
+  }
+
+  console.log(postsArray)
+  // TO MAKE THE MAP APPEAR YOU MUST
+  // ADD YOUR ACCESS TOKEN FROM
+  // https://account.mapbox.com
+  mapboxgl.accessToken = 'pk.eyJ1IjoiaXAzbHk1IiwiYSI6ImNrMGM1ZXg2bjB5cXgzYm53bHAyem5ldmkifQ.LM4FfJrdUcagfWYHuDUjww';
+  var map = new mapboxgl.Map({
+    container: 'map', // container id
+    style: 'mapbox://styles/mapbox/streets-v11', // style URL
+    center: [locationLng, locationLat], // starting position [lng, lat]
+    zoom: 11 // starting zoom
+  });
+
+  map.on('load', function () {
+    map.resize();
+  });
+
+  function removeActiveClassFromProperty() {
+    let activePosts = document.querySelectorAll('.active')
+    activePosts.forEach(function (postDiv) {
+      postDiv.classList.remove('active')
+    })
+  }
+
+  postsArray.forEach(post => {
+    post.coordinates = {
+      "lng": post.fields.lng,
+      "lat": post.fields.lat
+    }
+    let el = document.createElement('a');
+    el.className = `marker postId-${post.pk}`
+    el.innerHTML = `<i class="fas fa-map-marker"></i>`
+    el.href = `#mapId-${post.pk}`
+
+    new mapboxgl.Marker(el).setLngLat(post.coordinates).addTo(map);
+
+
+    el.addEventListener('click', function () {
+      removeActiveClassFromProperty()
+      let activeElements = document.querySelectorAll(`.postId-${post.pk}`)
+      activeElements.forEach((element) => {
+        console.log(activeElements)
+        element.classList.add('active');
+      })
+    })
+  })
+
+  let postsElem = document.querySelector('#posts')
+
+  postsElem.addEventListener('click', function (e) {
+    console.log(e.target)
+    if (e.target.classList.contains("flyToMap")) {
+      removeActiveClassFromProperty()
+
+      let activeElements = document.querySelectorAll(`.postId-${e.target.dataset.id}`)
+      activeElements.forEach((element) => {
+        console.log(activeElements)
+        element.classList.add('active');
+      })
+
+      map.flyTo({
+        center: [e.target.dataset.lng, e.target.dataset.lat],
+        essential: true, // this animation is considered essential with respect to prefers-reduced-motion
+        zoom: 14
+      });
+    }
+  })
+
+
+  // Live post socket
+  let postListEndpoint = (location.protocol == 'https:' ? 'wss://' : 'ws://') + location.host + "/ws/postList/"
+
+  postListSocket = new WebSocket(postListEndpoint);
+
+  postListSocket.onopen = function (message) {
+    console.log("post list open", message);
+  }
+
+  postListSocket.onmessage = function (e) {
+    const jData = JSON.parse(e.data)
+    let jFull = JSON.parse(jData.data)
+    jPost = jFull[0].fields
+    const jUsername = jData.username
+    const jCommentCount = e.commentCount
+    const jPostCode = e.areaCode
+    const jCategory = e.category
+
+    currentPosts = document.querySelector('#posts')
+    currentPosts.insertAdjacentHTML("afterbegin",
+      `<div class="postAnchor" id="mapId-${jPost.id}">
+                <div class="post postId-${jPost.id}">
+                    <div class="postImage">
+                        <a href="/post/${jPost.slug}">
+                            <img src="/media/${jPost.thumbnail}">
+                        </a>
+                    </div>
+                    <div class="postLeft">
+                        <div class="postTitle"><a href="/post/${jPost.slug}">${jPost.title}</a>
+                        </div>
+                        <div class="postSecondaryDetails">
+                            <div class="postAuthor"><a href="/post/${jPost.user}">${jUsername}</a></div>
+                            <div class="postTimestamp">${jPost.date_created}</div>
+                        </div>
+                    </div>
+                    <div class="postRight">
+                        <div class="postCommentCount"><i class="fas fa-comment"></i> ${jCommentCount}</div>
+                        <div class="postExpiredDate">Pickup time: ${jPost.expiration_date}</div>
+                        <div class="postCategory postTag">${jCategory}</div>
+                        <div class="postPostcode">${jPostCode}</div>
+                    </div>
+                </div>
+            </div>`);
+
+    // map stuff
+    jPost.coordinates = {
+      "lng": jPost.lng,
+      "lat": jPost.lat
+    }
+    let el = document.createElement('a');
+    el.className = `marker postId-${jPost.id}`
+    el.style.height = "20px";
+    el.style.width = "20px";
+    el.href = `#mapId-${jPost.id}`
+
+    new mapboxgl.Marker(el).setLngLat(jPost.coordinates).addTo(map);
+
+    el.addEventListener('click', function () {
+      removeActiveClassFromProperty()
+      let activeElements = document.querySelectorAll(`.postId-${jPost.id}`)
+      activeElements.forEach((element) => {
+        console.log(activeElements)
+        element.classList.add('active');
+      })
+    })
+  }
+
+  postListSocket.onerror = function (message) {
+    console.log("post list error", message);
+  }
+
+  postListSocket.onclose = function (message) {
+    console.log("post list close", message);
+  }
+
+</script>
+
+<style>
+  a {
+    color: inherit;
+    text-decoration: inherit;
+  }
+
+  a:hover {
+    text-decoration: underline;
+  }
+
+  .active {
+    box-shadow: 0 0 10px 0 rgba(78, 213, 48, 1) !important;
+  }
+
+  .marker.active {
+    box-shadow: none !important;
+    color: #4ED530 !important;
+    opacity: 1;
+    font-size: 3.5em;
+  }
+
+  .post .postTitle a {
+    text-decoration: underline;
+  }
+
+  .postTitle {
+    display: inline;
+    align-items: center;
+    font-size: 1.1em;
+    margin-bottom: .5em;
+  }
+
+  .postTitle a {
+    margin-right: .2em;
+  }
+
+  .main .quickButtons {
+    color: #4ED530;
+    padding: 1em 0;
+    align-items: center;
+    display: flex;
+    font-weight: 500;
+    margin: 0 2em;
+
+  }
+
+  .main .quickButtons span,
+  .main .quickButtons i {
+    cursor: pointer;
+  }
+
+  .main .quickButtons div {
+    margin-right: 2em;
+  }
+
+  .main .categoryTitle {
+    margin-top: 1em;
+    display: flex;
+    color: #4ED530;
+    width: 100%;
+    font-size: 2em;
+    justify-content: center;
+  }
+
+  .categoryTitle {
+    text-transform: capitalize;
+  }
+
+  .quickButtons a {
+    text-decoration: none;
+  }
+
+  .content {
+    height: 90%;
+    overflow-y: scroll;
+    scroll-behavior: smooth;
+    flex-grow: 1;
+    background: white;
+    box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+    margin: 0 2em;
+  }
+
+  .postExpired-True {
+    filter: grayscale(0.7);
+    opacity: .8;
+  }
+
+  .postAnchor {
+    padding: 1em;
+  }
+
+  .post {
+    padding: 0 1em;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    color: #545454;
+    text-decoration: none;
+    box-shadow: 0px 8px 16px 0px rgba(239, 123, 114, 0);
+    transition: box-shadow 1s;
+  }
+
+  .postLeft {
+    width: 50%;
+    max-width: 33%;
+    padding: 2em;
+  }
+
+  .postRightContainer {
+    display: flex;
+    align-items: center;
+  }
+
+  .postPostcode i {
+    font-size: 2em;
+    color: #4ED530;
+    transition: transform .5s;
+    margin-left: .5em;
+  }
+
+  .postPostcode i:hover {
+    transform: scale(1.2);
+    color: #545454;
+  }
+
+  .postCommentCount {
+    margin-right: .5em;
+    color: #4ED530;
+  }
+
+  .voteComponent {
+    display: flex;
+    align-items: center;
+  }
+
+  .upVote,
+  .downVote {
+    margin: 0 .5em;
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .upVote.color1,
+  .upVote:hover {
+    color: #9DC86C;
+  }
+
+  .downVote.color-1,
+  .downVote:hover {
+    color: #4ED530;
+  }
+
+  .upVote div,
+  .downVote div {
+    font-size: .6em;
+    padding: .2em;
+  }
+
+  .postScore {
+    padding: 0 .25em;
+  }
+
+
+  .pageButtonsContainer {
+    display: flex;
+    width: 25%;
+    margin: 2em auto;
+  }
+
+  .pageButtonsContainer .pageButton {
+    background: white;
+    white-space: nowrap;
+    display: flex;
+    padding: 1em;
+    box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+    color: #4ED530;
+  }
+
+  .pageButtonsContainer .currentPage {
+    color: #545454;
+    padding: 0 1em;
+  }
+
+  .pageButton.center {
+    margin: 0 2em;
+  }
+
+  .pageButton .fas {
+    color: #545454;
+  }
+
+
+  /* MAPBOX */
+
+  .marker {
+    font-size: 3em;
+    text-align: center;
+    color: #545454;
+    border-radius: 50%;
+    background-position: center;
+    opacity: 0.9;
+    transition: font-size 1s;
+  }
+
+  #map {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+  }
+
+  .mapContentContainer {
+    display: flex;
+    height: calc(100vh - 5em);
+
+  }
+
+  .mapContainer {
+    position: relative;
+    width: 100% !important;
+    flex: 1;
+    display: flex;
+  }
+
+  .mapContentContainer .main {
+    width: 50%;
+    flex-grow: unset;
+  }
+
+  /* FILTERS CSS */
+
+  .cancelButton {
+    display: none;
+  }
+
+  .active-expired.expired,
+  .active-today.today,
+  .activePostcode,
+  .activePostcodeDropdown,
+  .activeCategory {
+    background: #4ED530;
+    border-radius: 3em;
+    padding: .2em .4em;
+    color: white !important;
+    align-items: center;
+  }
+
+  .active-expired.expired .cancelButton,
+  .active-today.today .cancelButton,
+  .activePostcode .cancelButton {
+    display: inline;
+  }
+
+  .hidden {
+    display: none;
+  }
+</style>
+{% endblock content %}

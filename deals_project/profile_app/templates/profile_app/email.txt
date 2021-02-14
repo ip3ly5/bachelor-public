@@ -1,0 +1,2 @@
+    Hi! Your subscription has been busy! Here is what you missed out on whilst you were gone!
+    {{posts}}

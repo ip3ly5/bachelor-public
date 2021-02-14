@@ -1,0 +1,430 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<div class="main">
+    <div class="quickButtons">
+        {% if user == profileUser %}
+        <div>
+            <a href=" {% url 'profile_app:edit_profile' %}">
+                <span>Edit profile</span>
+                <i class="fas fa-edit"></i>
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    <div class="content">
+        <div class="profileDetails">
+            <div class="leftContainer">
+
+                <div class="profileImgContainer">
+                    <img class="profileImg"
+                        src="{% if profileUser.profile.image %}{{profileUser.profile.image.url}}{% else %}{% static 'profilePic.jpg' %}{% endif %}">
+                </div>
+            </div>
+
+            <div class="middleContainer">
+                <div class="profileHeader">
+                    <div class="profileAuthor"><a
+                            href="{% url 'profile_app:profile' profileUser.profile.user.id %}">{{profileUser}}</a></div>
+                    <div class="profileTimestamp">Joined: {{profileUser.date_joined}}</div>
+                </div>
+                <div class="profileBody">
+                    {{profileUser.profile.summary}}
+                </div>
+            </div>
+            <div class="voteComponent" data-id="{{profileUser.profile.id}}" data-votestatus="{{profileUser.profile.voteStatus}}">
+                <div class="upVote color{{profileUser.profile.voteStatus}}" data-vote=1>
+                    <i class="fas fa-thumbs-up" data-vote=1></i>
+                    <div data-vote=1>Recommend (<span class="profileUpScore">{{profileUser.profile.votes_up}}</span>)</div>
+                </div>
+                <i class="fas fa-caret-up" data-vote=1></i>
+                <div class="profileUser.profileScore">{% if profileUser.profile.vote_score %}{{profileUser.profile.vote_score}} {% else %} 0 {% endif %}</div>
+                <i class="fas fa-caret-down" data-vote=-1></i>
+                <div class="downVote color{{profileUser.profile.voteStatus}}" data-vote=-1>
+                    <i class="fas fa-thumbs-down" data-vote=-1></i>
+                    <div data-vote=-1>Not Recommend (<span class="profileDownScore">{{profileUser.profile.votes_down}}</span>)</div>
+                </div>
+            </div>
+        </div>
+        <div class="line"></div>
+        <div class="subHeader">Freebies by {{profileUser}}</div>
+
+        <div class="createdPostsContainer">
+            {% for post in posts.all %}
+            <a href="{% url 'deals_app:post' post.slug %}">
+                <div class="post">
+                    <div class="postImageContainer">
+                        <img class="postImage" src="{{post.thumbnail.url}}">
+                    </div>
+                    <div class="postRight">
+                        <div class="postBody">
+                            <div class="postTitle">{{post.title}}</div>
+                            <div class="postTimestamp">- {{post.when_published}}</div>
+                        </div>
+                        <div class="postCenter">
+                            <div class="postTag">{{post.category}}</div>
+                        </div>
+                        <div class="postFooter">
+                            <div class="location">{{post.postcode.code}} - {{post.postcode.text}}</div>
+                            <div class="collectionDate">Collect by: {{post.expiration_date}}</div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    <!-- {{profileUser}}
+            {{profileUser.userprofile.summary}}
+                <div class="profileTotalSubscribers" data-id="totalSubscribers">{{subscribers}}</div>
+            
+            {% if user.is_authenticated and user != profileUser %}
+            <a href="">start chat</a>
+            <div class="subscriptionsContainer">
+                <div onclick="Subscribe()" data-id="{{profileUser.id}}" class="subscriptionStatus-{{subscriptionStatus}}">
+                    Subscribe
+                </div>
+            </div>
+            {% endif %} -->
+    <!-- 
+
+            <div class="cardsContainer">
+                        {% for post in posts.all %}
+                        <div class="card">
+                            <a href="{% url 'deals_app:post' post.id %}">
+                                <div class="cardImgTop">
+                                    <img src="{{ post.thumbnail.url }}">
+                                </div>
+                            </a>
+                            <div >
+                                <div>
+                                    <a href="{% url 'deals_app:post' post.id %}">{{post.name}} | {{ post.weapon }}</a>
+                                    <a href="{% url 'profile_app:profile' post.user.id %}">{{ post.user }}</a>
+                                    <div>{{ post.summary }}</div>
+                                    <div>
+                                        {% if user == profileUser %}
+                                        <div>
+                                            <a href="{% url 'deals_app:delete' post.id %}">delete post</a>
+                                            <a href="{% url 'deals_app:edit' post.id %}">edit post</a>
+                                        </div>
+                                        {% endif %}
+                                        <div>{{post.timestamp}}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %} -->
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<style>
+
+    /* vote component */
+
+    .voteComponent {
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        flex-direction:column;
+        color: #545454;
+    }
+
+    .upVote, .downVote {
+        align-items:center;
+        display:flex;
+        flex-direction:column;
+        cursor:pointer;
+    }
+
+    .upVote.color1, .upVote:hover{
+        color:#9DC86C;
+    }
+
+    .downVote.color-1, .downVote:hover { 
+        color:#EF7C43;
+    }
+
+    .upVote div, .downVote div{
+        white-space: nowrap;
+        font-size:.6em;
+        padding:.2em;
+        width:100%;
+    }
+
+    .postScore {
+        padding: 0 .25em;
+    }
+
+    .authorHeader {
+        display:flex;
+        flex-direction:row;
+        align-items:center;
+        margin: 1em 0;
+    }
+
+    .authorHeader div {
+        margin: 0 .25em;
+    }
+
+    .main .quickButtons,
+    .subHeader {
+        color: #4ED530;
+        height: 4.5em;
+        align-items: center;
+        display: flex;
+        font-weight: 500;
+    }
+
+    .main .quickButtons span,
+    .main .quickButtons i {
+        margin-right: .5em;
+        cursor: pointer;
+        color: #4ED530;
+    }
+
+    a {
+        text-decoration: none;
+        color: unset;
+    }
+
+    .profileAuthor:hover {
+        text-decoration: underline;
+    }
+
+    .content {
+        padding: 2em;
+        flex-grow: 1;
+        background: white;
+        box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+    }
+
+    .profileDetails {
+        display: flex;
+        flex-direction: row;
+    }
+
+    .middleContainer {
+        padding: 0 2em;
+        flex: 1;
+    }
+
+    .profileHeader {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        margin: 1em 0;
+        color: #545454
+    }
+
+    .profileAuthor {
+        font-weight: 500;
+        color: #4ED530;
+    }
+
+    .profileTimestamp {
+        margin-left: .5em;
+        font-size: .7em;
+        color: #9D9D9C;
+    }
+
+    .profileHeader>div {
+        display: inline-flex;
+        margin-bottom: .2em;
+    }
+
+    .profileTag {
+        background-color: #545454;
+        padding: .3em;
+        margin: 0 .5em;
+        color: white;
+        align-items: center;
+        display: flex;
+    }
+
+    .profileBody {
+        display: flex;
+        margin-top: 1em;
+        width: 100%;
+        font-weight: 300;
+    }
+
+    .profileImgContainer {
+        display: flex;
+        justify-content: center;
+        box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+        border-radius: 50%;
+    }
+
+    .profileImg {
+        height: 10em;
+        width: 10em;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .line {
+        border-bottom: 1px solid #bdbdbd;
+        margin-top: 2em;
+    }
+
+    .createdPostsContainer {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        width: 100%;
+    }
+
+    .post {
+        display: flex;
+        margin: 1em 3em;
+        justify-items: space-between;
+    }
+
+    .postTag {
+        width: 50%;
+    }
+
+    .collectionDate {
+        color: #9D9D9C;
+        font-weight: 500;
+    }
+
+    .postFooter {
+        width: 100%;
+        font-size: .7em;
+        color: #9D9D9C;
+    }
+
+    .postImageContainer {
+        display: flex;
+        justify-content: center;
+        box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+    }
+
+    .postImage {
+        height: 7em;
+        width: 10em;
+        object-fit: cover;
+    }
+
+    .postRight {
+        padding-left: .5em;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .postTitle {
+        text-decoration: underline;
+        color: #545454;
+        font-size: 1.1em;
+    }
+
+    .priceContainer {
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .newPrice {
+        color: #4ED530;
+    }
+
+    .oldPrice {
+        color: #9D9D9C;
+        text-decoration: line-through;
+        text-decoration-thickness: 2px;
+    }
+</style>
+<script>
+
+    function getCookie(name) {
+        var cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            var cookies = document.cookie.split(';');
+            for (var i = 0; i < cookies.length; i++) {
+                var cookie = cookies[i].trim();
+                // Does this cookie string begin with the name we want?
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    var csrftoken = getCookie('csrftoken');
+
+    let voteContainer = document.querySelector('.voteComponent')
+
+    voteContainer.addEventListener('click', (e)=>{
+    let pk = voteContainer.dataset.id
+    let voteOption = e.target.dataset.vote
+    console.log(voteOption)
+    console.log(voteContainer.dataset.votestatus)
+    if (Number(voteOption) != Number(voteContainer.dataset.votestatus)) {
+
+        fetch(`/users/${pk}/vote`, {
+            method: "POST",
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken,
+            },
+
+            //make sure to serialize your JSON body
+            body: JSON.stringify({
+                "vote": voteOption
+            })
+        })
+        .then((response) => {                
+            return response.clone().json()
+        }).then(function(data) {
+                    console.log(data.count)
+                    console.log(data.upCount)
+                    console.log(data.downCount)
+                    voteContainer.children[0].children[1].children[0].innerHTML = data.upCount
+                    voteContainer.children[4].children[1].children[0].innerHTML = data.downCount
+                    voteContainer.children[2].innerHTML = data.count
+                if (voteOption == 1) {
+                    voteContainer.dataset.votestatus = 1
+                    voteContainer.children[0].classList.add('color1')
+                    voteContainer.children[4].classList.remove('color-1')
+                } else {
+                    voteContainer.dataset.votestatus = -1
+                    voteContainer.children[0].classList.remove('color1')
+                    voteContainer.children[4].classList.add('color-1')
+
+                }
+            
+        })
+    }
+
+    else {
+        fetch(`/users/${pk}/vote`, {
+            method: "DELETE",
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken,
+            }
+        })
+        .then((response) => {        
+        return response.clone().json()
+
+        }).then(function(data) {
+
+            voteContainer.children[2].innerHTML = data.count
+            voteContainer.children[0].children[1].children[0].innerHTML = data.upCount
+            voteContainer.children[4].children[1].children[0].innerHTML = data.downCount
+            
+            voteContainer.dataset.votestatus = "";
+            voteContainer.children[0].classList.remove('color1')
+            voteContainer.children[4].classList.remove('color-1')
+        })
+    }   
+})
+</script>
+{% endblock %}

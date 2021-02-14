@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Account settings{% endblock title %}
+{% block content %}
+<div class="main">
+    <div class="quickButtons"></div>
+    <div class="content">
+        <div class="heading">Account settings</div>
+
+        <div class="sub-header-container">
+            <!-- fix urls -->
+            <form class="registerForm" id="frmChangeEmail" action="{% url 'login_app:email_change' %}" method="POST">
+                {% csrf_token %}
+                <div>Change Email</div>
+                <input type="email" name="new_email" class="form-input-1" value="{{request.user.email}}">
+                <button id="submit-email" form="frmChangeEmail" class="submitForm small">Submit</button>
+            </form>
+            <div class="line-2"></div>
+
+            <form class="registerForm" id="frmChangePw" action="{% url 'login_app:password_change' %}" method="POST">
+                {% csrf_token %}
+                <div>Change password</div>
+                <input type="password" name="new_password" placeholder="New Password" class="form-input-1">
+                <input type="password" name="confirm_password" placeholder="Confirm new password" class="form-input-1">
+                <button id="submit-new-pw" form="frmChangePw" class="submitForm small">Submit</button>
+            </form>
+
+            <div class="line-2"></div>
+            <form class="registerForm" id="frmDelete" action="{% url 'login_app:delete_account'%}" method="POST">
+                {% csrf_token %}
+                <div>Remove account</div>
+                <input type="password" name="password" placeholder="Password" class="form-input-1">
+                <input type="text" name="confirm_deletion" placeholder="TYPE DELETE" class="form-input-1">
+                <button id="submit-pw-req" form="frmDelete" class="submitForm small">Remove</button>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+    function getCookie(name) {
+        var cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            var cookies = document.cookie.split(';');
+            for (var i = 0; i < cookies.length; i++) {
+                var cookie = cookies[i].trim();
+                // Does this cookie string begin with the name we want?
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    var csrftoken = getCookie('csrftoken');
+</script>
+<style>
+    .content {
+        padding: 2em;
+        flex-grow: 1;
+        background: white;
+        box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+    }
+
+    .main .quickButtons,
+    .subHeader {
+        color: #4ED530;
+        height: 4.5em;
+        align-items: center;
+        display: flex;
+        font-weight: 500;
+    }
+
+    .main .quickButtons span,
+    .main .quickButtons i {
+        margin-right: .5em;
+        cursor: pointer;
+        color: #4ED530;
+    }
+
+    .registerForm {
+        display: flex;
+        flex-direction: column;
+        row-gap: 0.5em;
+    }
+
+    .heading {
+        font-size: 1.5em;
+        color: #4ED530;
+    }
+
+    #pw-reset-dropdown {
+        margin-top: 2em;
+        cursor: pointer;
+    }
+
+    .dropdown-content-1 {
+        display: none;
+        flex-direction: column;
+        row-gap: 0.5em;
+    }
+</style>
+{% endblock %}

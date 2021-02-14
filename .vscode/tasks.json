@@ -1,0 +1,68 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Django Vagrant",
+            "dependsOn": [
+                "boot-machine",
+                "django-ssh-pool"
+            ],
+            "dependsOrder": "sequence",
+            "problemMatcher": []
+        },
+        {
+            "label": "django-ssh-pool",
+            "dependsOn": [
+                "ssh-redis",
+                "ssh-rq-server",
+                "ssh-runserver"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "boot-machine",
+            "type": "shell",
+            "command": "vagrant up",
+            "presentation": {
+                "group": "term1",
+                "showReuseMessage": false,
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "ssh-redis",
+            "type": "shell",
+            "command": "vagrant ssh && . django/bin/activate",
+            "presentation": {
+                "group": "term2",
+                "showReuseMessage": false,
+                "focus": true           
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "ssh-rq-server",
+            "type": "shell",
+            "command": "TIMEOUT /T 3 && vagrant ssh",
+            "presentation": {
+                "group": "term3",
+                "showReuseMessage": false,
+                "focus": true           
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "ssh-runserver",
+            "type": "shell",
+            "command":  "cd deals_project && python manage.py runserver",
+            "presentation": {
+                "group": "term4",
+                "showReuseMessage": false,
+                "focus": true           
+            },
+            "problemMatcher": []
+        }
+    ]
+}

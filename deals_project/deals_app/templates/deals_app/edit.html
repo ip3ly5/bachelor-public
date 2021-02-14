@@ -1,0 +1,440 @@
+{% extends 'base.html' %}
+{% block title %}Edit post{% endblock title %}
+{% block content %}
+<div class="main">
+    <div class="content">
+        <form id="editPostForm" class="editPostForm" method="POST" action="{% url 'deals_app:edit' post.slug %}"
+            enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="heading">Edit post</div>
+            <div class="pairContainer">
+                <div class="formPair">
+                    <label>Title<span class="asterisk">*</span></label>
+                    <div class="inputContainer">
+                        {{form.title }}
+                    </div>
+                </div>
+
+                <div class="formPair">
+                    <label>Pickup date<span class="asterisk">*</span></label>
+                    <div class="inputContainer">
+                        {{form.expiration_date}}
+                    </div>
+                </div>
+            </div>
+            <div class="formSingle">
+                <label>Category<span class="asterisk">*</span></label>
+                <div class="inputContainer">
+                    {{form.category}}
+                </div>
+            </div>
+            <div class="formSingle">
+                <label>Description<span class="asterisk">*</span></label>
+                <div class="inputContainer">
+                    {{form.description}}
+                </div>
+            </div>
+            <div class="formSingle">
+                <label>Images<span class="asterisk">*</span></label>
+                <input class="multiFiles" type="file" multiple>
+            </div>
+            <div class="pairContainer">
+                <div class="formPair">
+                    <label>Address Line 1<span class="asterisk">*</span></label>
+                    <div class="inputContainer">
+                        {{form.address_line_1}}
+                    </div>
+                </div>
+
+                <div class="formPair">
+                    <label>Address Line 2<span class="asterisk">*</span></label>
+                    <div class="inputContainer">
+                        {{form.address_line_2}}
+                    </div>
+                </div>
+            </div>
+            {{form.postcode_code.as_hidden}}
+            {{form.postcode_text.as_hidden}}
+            {{form.lng.as_hidden}}
+            {{form.lat.as_hidden}}
+            {{form.region_code.as_hidden}}
+            <div class="formSingle">
+                <label>Location</label>
+                <div class="mapContainer">
+                    <div class="pointer"><i class="fas fa-map-marker"></i></div>
+                    <div id="map">
+                    </div>
+                </div>
+        </form>
+        <div>
+            {{ form.errors }}
+        </div>
+    </div>
+</div>
+<div class="submitForm">
+    <div id="savePost">Submit</div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+
+        function getCookie(name) {
+            var cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                var cookies = document.cookie.split(';');
+                for (var i = 0; i < cookies.length; i++) {
+                    var cookie = cookies[i].trim();
+                    // Does this cookie string begin with the name we want?
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        var csrftoken = getCookie('csrftoken');
+        var files = []
+        FilePond.registerPlugin(FilePondPluginFileValidateSize);
+        FilePond.registerPlugin(FilePondPluginFileValidateType);
+        FilePond.registerPlugin(FilePondPluginImagePreview);
+        FilePond.registerPlugin(FilePondPluginFileEncode);
+
+        FilePond.setOptions({
+            allowMultiple: true,
+            maxFiles: 10,
+            maxFileSize: '3MB'
+        })
+        const inputElement = document.querySelector('input[type="file"]');
+
+        let file, index;
+        const pond = FilePond.create(inputElement, {
+            acceptedFileTypes: ['image/png', 'image/jpeg'],
+            imagePreviewHeight: "50px",
+            onaddfile: (err, fileItem) => {
+                if (fileItem.file instanceof File) {
+                    if (!err) {
+                        files.push(fileItem.getFileEncodeDataURL())
+                        console.log(fileItem.file)
+                    }
+                    console.log(files)
+                } else {
+                    if (err) {
+                        console.log(err)
+                        return
+                    }
+                }
+            },
+            beforeRemoveFile: (fileItem) => {
+                console.log('fileItem is ', fileItem)
+                if (fileItem.file instanceof File) {
+
+                    index = files.indexOf(fileItem.getFileEncodeDataURL())
+                    console.log(files)
+                    console.log(index)
+                } else {
+                    files.forEach((object) => {
+                        if (object.url == fileItem.file.name) {
+                            index = files.indexOf(object);
+                        }
+                    })
+                }
+
+                if (index > -1) {
+                    files.splice(index, 1)
+                }
+                console.log(files)
+            }
+        });
+
+        let urlarray, urlsplit, url, pk
+        let obj = {}
+        {% for postImage in postImages %}
+        url = "{{postImage.image.url}}"
+        pk = "{{postImage.pk}}"
+        urlarray = url.split("/")
+        urlsplit = urlarray[urlarray.length - 1]
+        obj = { "url": urlsplit, "pk": pk }
+        console.log(obj)
+        pond.addFile(url)
+        files.push(obj)
+        obj = {}
+        {% endfor %}
+        console.log(files)
+
+        document.getElementById("savePost").addEventListener("click", () => {
+            let form = document.forms["editPostForm"]
+            let formData = new FormData()
+            let formDataFiles = new FormData()
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}')
+            let length = 0, existingLength = 0;
+            for (var i = 0; i < files.length; i++) {
+                if (files[i].url) {
+                    /*  FILE ALREADY SUBMITTED */
+                    formData.append('existingImages' + existingLength, files[i].pk)
+                    existingLength++
+                }
+                else {
+                    /* NEW FILE */
+                    formData.append('newImages' + length, files[i])
+                    length++
+                }
+            }
+            console.log(length)
+            console.log(existingLength)
+            formData.append('existingImagesLength', existingLength)
+            formData.append('newImagesLength', length)
+
+
+            document.querySelector('.filepond--browser').setAttribute("name", "test");
+
+            for (var pair of formData.entries()) {
+                console.log(pair[0] + ': ' + pair[1]);
+
+                let input = document.createElement("input");
+                input.setAttribute("name", pair[0]);
+                input.setAttribute("value", pair[1]);
+                form.appendChild(input);
+            }
+
+            console.log(form)
+            form.submit()
+
+        });
+
+
+        let oldLng = document.querySelector('#id_lng').value;
+        let oldLat = document.querySelector('#id_lat').value;
+
+
+        mapboxgl.accessToken = 'pk.eyJ1IjoiaXAzbHk1IiwiYSI6ImNrMGM1ZXg2bjB5cXgzYm53bHAyem5ldmkifQ.LM4FfJrdUcagfWYHuDUjww';
+        var map = new mapboxgl.Map({
+            container: 'map', // container id
+            style: 'mapbox://styles/mapbox/streets-v11', // style URL
+            center: [oldLng, oldLat], // starting position [lng, lat]
+            zoom: 12 // starting zoom
+        });
+
+        map.on('load', function () {
+            map.resize();
+        });
+
+        // GET COORDINATES //
+
+        let pointer = document.querySelector('.pointer');
+
+        map.on('mousedown', function (e) {
+            pointer.classList.add('pointerActive')
+        })
+
+        map.on('mouseup', function (e) {
+            pointer.classList.remove('pointerActive')
+            var center = map.getCenter();
+            var { longitude, latitude } = map.getCenter();
+
+            let lngInput = document.querySelector('#id_lng')
+            let latInput = document.querySelector('#id_lat')
+            let addressLine1Input = document.querySelector('#id_address_line_1')
+            let addressLine2Input = document.querySelector('#id_address_line_2')
+            let postcodeCodeInput = document.querySelector('#id_postcode_code')
+            let postcodeTextInput = document.querySelector('#id_postcode_text')
+            let regionCodeInput = document.querySelector('#id_region_code')
+
+            lngInput.value = center.lng
+            latInput.value = center.lat
+
+            fetch(`get_address/`, {
+                method: "POST",
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({
+                    "lng": lngInput.value,
+                    "lat": latInput.value
+                })
+            })
+                .then((response) => {
+                    let res = response.json()
+                    return res
+
+                }).then(function (data) {
+
+                    let addressArray = data.response.features
+                    console.log(addressArray)
+
+                    addressArray.forEach((node) => {
+                        switch (node.place_type[0]) {
+                            case "address":
+                                addressLine1Input.value = node.address;
+                                addressLine2Input.value = node.text
+                                break;
+                            case "postcode":
+                                postcodeCodeInput.value = node.text;
+                                break;
+                            case "place":
+                                postcodeTextInput.value = node.text;
+                                break;
+                            case "region":
+                                regionCodeInput.value = node.properties.short_code.substring(3);
+                                break;
+                        }
+                    })
+                })
+        });
+    });
+
+
+</script>
+
+
+<style>
+    .main {
+        flex-direction: row !important;
+        align-items: center;
+    }
+
+    .content {
+        margin-top: 4.5em;
+        flex-grow: 1;
+        background: white;
+        box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+        color: #545454;
+    }
+
+    .editPostForm {
+        margin: 2em;
+    }
+
+    .submitForm {
+        margin-left: 1em;
+        padding: 1em;
+        background: #4ED530;
+        color: white;
+        font-weight: 500;
+    }
+
+    label {
+        display: flex;
+        font-size: 1em;
+    }
+
+    .formPair {
+        display: flex;
+        flex-direction: column;
+        width: 45%;
+        margin-top: 1em;
+    }
+
+    .formSingle {
+        margin-top: 1em;
+    }
+
+    .heading {
+        font-size: 1.5em;
+        color: #4ED530;
+    }
+
+    .content .asterisk {
+        color: #4ED530;
+    }
+
+    label {
+        margin: .5em 0;
+    }
+
+    .pairContainer {
+        display: flex;
+        flex-direction: row;
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .inputContainer {
+        display: flex;
+        border: 1px solid #dadada;
+        box-shadow: 0px 1px 5px 0px #DCDDDC;
+        padding: .5em;
+        border-radius: 1em;
+    }
+
+    .inputContainer i {
+        color: #dadada;
+        margin-right: .5em;
+        display: flex;
+    }
+
+    .inputContainer input,
+    .inputContainer textarea {
+        border: none;
+        font-weight: 500;
+        color: #555454;
+        flex: 1;
+    }
+
+    .inputContainer textarea {
+        height: 10em;
+        resize: none;
+    }
+
+    .multiFiles {
+        margin-top: 1em;
+    }
+
+
+    /* FILEPOND */
+
+    .filepond--image-clip {
+        height: 50%;
+        margin: 0;
+        margin-left: auto;
+    }
+
+    .filepond--image-preview-overlay-idle {
+        opacity: 0;
+        color: transparent;
+    }
+
+    /* MAPBOX */
+
+    .pointer {
+        font-size: 2em;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        margin-right: -50%;
+        z-index: 99;
+        pointer-events: none;
+        transform: translate(-50%, -50%);
+        color: #4ED530;
+        transition: transform .25s ease-in-out;
+    }
+
+    .pointerActive {
+        transform: translate(-50%, -65%) rotate(5deg);
+    }
+
+    #map {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+    }
+
+    .mapContentContainer {
+        display: flex;
+        height: calc(100vh - 5em);
+
+    }
+
+    .mapContainer {
+        position: relative;
+        width: 100% !important;
+        height: 20em;
+        flex: 1;
+        display: flex;
+    }
+</style>
+{% endblock content %}

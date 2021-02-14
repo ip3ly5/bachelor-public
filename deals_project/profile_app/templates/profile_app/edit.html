@@ -1,0 +1,399 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<div class="main">
+    <div class="content">
+        <form id="editProfileForm" action="{% url 'profile_app:edit_profile' %}" method="POST">
+            {% csrf_token %}
+            <div class="profileDetails">
+                <div class="leftContainer">
+                    <div class="profileImgContainer">
+                        <input type="file" class="filepond" name="filepond" />
+                        <input type="hidden" name="file" />
+                    </div>
+                </div>
+                <div class="middleContainer">
+                    <div class="profileHeader">
+                        <div class="profileAuthor"><a
+                                href="{% url 'profile_app:profile' profileUser.profile.user.id %}">{{profileUser}}</a>
+                        </div>
+                    </div>
+                    <div class="profileBody">
+                        <textarea name="summary">
+                            {{profileUser.profile.summary}}
+                        </textarea>
+                    </div>
+                </div>
+        </form>
+    </div>
+    <!-- {{profileUser}}
+            {{profileUser.userprofile.summary}}
+                <div class="profileTotalSubscribers" data-id="totalSubscribers">{{subscribers}}</div>
+            
+            {% if user.is_authenticated and user != profileUser %}
+            <a href="">start chat</a>
+            <div class="subscriptionsContainer">
+                <div onclick="Subscribe()" data-id="{{profileUser.id}}" class="subscriptionStatus-{{subscriptionStatus}}">
+                    Subscribe
+                </div>
+            </div>
+            {% endif %} -->
+    <!-- 
+
+            <div class="cardsContainer">
+                        {% for post in posts.all %}
+                        <div class="card">
+                            <a href="{% url 'deals_app:post' post.id %}">
+                                <div class="cardImgTop">
+                                    <img src="{{ post.thumbnail.url }}">
+                                </div>
+                            </a>
+                            <div >
+                                <div>
+                                    <a href="{% url 'deals_app:post' post.id %}">{{post.name}} | {{ post.weapon }}</a>
+                                    <a href="{% url 'profile_app:profile' post.user.id %}">{{ post.user }}</a>
+                                    <div>{{ post.summary }}</div>
+                                    <div>
+                                        {% if user == profileUser %}
+                                        <div>
+                                            <a href="{% url 'deals_app:delete' post.id %}">delete post</a>
+                                            <a href="{% url 'deals_app:edit' post.id %}">edit post</a>
+                                        </div>
+                                        {% endif %}
+                                        <div>{{post.timestamp}}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %} -->
+</div>
+<div id="submitForm">
+    Save
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+{{ profileUser.profile.image.url|json_script:'profileImageUrl' }}
+
+<style>
+    .main .quickButtons span,
+    .main .quickButtons i {
+        margin-right: .5em;
+        cursor: pointer;
+        color: #4ED530;
+    }
+
+    .main {
+        margin: 0 auto;
+        flex-direction: row !important;
+        margin-top: 4.5em !important;
+        width: 60em;
+        flex-grow: 1;
+        display: flex;
+        align-items: center;
+    }
+
+    #submitForm {
+        margin-left: 1em;
+        padding: 1em;
+        background: #4ED530;
+        color: white;
+        font-weight: 500;
+        cursor: pointer;
+    }
+
+    a {
+        text-decoration: none;
+        color: unset;
+    }
+
+    .profileAuthor:hover {
+        text-decoration: underline;
+    }
+
+    .content {
+        padding: 2em;
+        flex-grow: 1;
+        background: white;
+        box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+    }
+
+    .profileDetails {
+        display: flex;
+        flex-direction: row;
+    }
+
+    .middleContainer {
+        padding: 0 2em;
+        flex: 1;
+    }
+
+    .profileHeader {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        margin: 1em 0;
+        color: #545454
+    }
+
+    .profileAuthor {
+        font-weight: 500;
+        color: #4ED530;
+    }
+
+    .profileTimestamp {
+        margin-left: .5em;
+        font-size: .7em;
+        color: #9D9D9C;
+    }
+
+    .profileHeader>div {
+        display: inline-flex;
+        margin-bottom: .2em;
+    }
+
+    .profileTag {
+        background-color: #545454;
+        padding: .3em;
+        margin: 0 .5em;
+        color: white;
+        align-items: center;
+        display: flex;
+    }
+
+    .profileBody {
+        display: flex;
+        margin-top: 1em;
+        width: 100%;
+        font-weight: 300;
+    }
+
+    .profileImgContainer {
+        display: flex;
+        justify-content: center;
+        box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+        border-radius: 50%;
+    }
+
+    .profileImg {
+        height: 10em;
+        width: 10em;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .line {
+        border-bottom: 1px solid #bdbdbd;
+        margin-top: 2em;
+    }
+
+    .createdPostsContainer {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        width: 100%;
+    }
+
+    .post {
+        display: flex;
+        margin: 1em 3em;
+        justify-items: space-between;
+    }
+
+    .postBody {
+        margin: auto 0;
+    }
+
+    .postFooter {
+        width: 100%;
+        font-size: .7em;
+        color: #9D9D9C;
+    }
+
+    .postImageContainer {
+        display: flex;
+        justify-content: center;
+        box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+    }
+
+    .postImage {
+        height: 7em;
+        width: 10em;
+        object-fit: cover;
+    }
+
+    .postRight {
+        padding-left: .5em;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .postTitle {
+        color: #545454;
+        font-size: 1.1em;
+    }
+
+    .priceContainer {
+        display: flex;
+        justify-content: space-between;
+    }
+
+    textarea {
+        border: none;
+        font-weight: 500;
+        color: #555454;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid #dadada;
+        box-shadow: 0px 1px 5px 0px #DCDDDC;
+        padding: 1em;
+        border-radius: 1em;
+        resize: none;
+    }
+
+    /* FILEPOND */
+
+    .filepond--root {
+        width: 10em;
+        height: 10em;
+        margin: 0 auto;
+
+    }
+</style>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+
+
+        function getCookie(name) {
+            var cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                var cookies = document.cookie.split(';');
+                for (var i = 0; i < cookies.length; i++) {
+                    var cookie = cookies[i].trim();
+                    // Does this cookie string begin with the name we want?
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        var csrftoken = getCookie('csrftoken');
+
+
+        // function Subscribe() {
+        //     let elem = event.target
+        //     let user_id = elem.dataset.id
+
+        //     if(elem.className == 'subscriptionStatus-1') {
+        //         console.log('deleting...')
+        //     fetch(`http://127.0.0.1:8000/users/${user_id}/profile/subscribe`, {
+        //             method: "DELETE",
+        //             headers: {
+        //                 'Accept': 'application/json',
+        //                 'Content-Type': 'application/json',
+        //                 'X-CSRFToken': csrftoken,
+        //             },
+
+        //             //make sure to serialize your JSON body
+        //             body: JSON.stringify({})
+        //         })
+        //         .then((response) => {
+        //             elem.className = 'subscriptionStatus-0'
+        //             totalSubscriptions = document.querySelector(`[data-id=totalSubscribers]`)
+        //             let number = totalSubscriptions.innerHTML 
+        //             number = parseInt(number) - 1
+        //             totalSubscriptions.innerHTML = number
+        //         })
+        //     }
+
+        // else if(elem.className == 'subscriptionStatus-0') {
+        //     console.log('adding...')
+
+        //     fetch(`http://127.0.0.1:8000/users/subscriptions`, {
+        //             method: "POST",
+        //             headers: {
+        //                 'Accept': 'application/json',
+        //                 'Content-Type': 'application/json',
+        //                 'X-CSRFToken': csrftoken,
+        //             },
+
+        //             //make sure to serialize your JSON body
+        //             body: JSON.stringify({
+        //                 "subscriber": "{{user.id}}",
+        //                 "subscribee": user_id
+        //             })
+        //         })
+        //         .then((response) => {
+        //             elem.className = 'subscriptionStatus-1'
+        //             totalSubscriptions = document.querySelector(`[data-id=totalSubscribers]`)
+        //             let number = totalSubscriptions.innerHTML 
+        //             number = parseInt(number) + 1
+        //             totalSubscriptions.innerHTML = number
+        //         })
+        //     }
+        // }
+
+        let profileImageUrl = JSON.parse(document.querySelector('#profileImageUrl').textContent);
+
+        FilePond.registerPlugin(
+            FilePondPluginImagePreview,
+            FilePondPluginImageCrop,
+            FilePondPluginImageResize,
+            FilePondPluginFileEncode,
+            FilePondPluginImageTransform
+        );
+
+
+        FilePond.setOptions({
+            maxFileSize: '3MB',
+            labelIdle: `Drag & Drop your picture or <span class="filepond--label-action">Browse</span>`,
+            imagePreviewHeight: 170,
+            imageCropAspectRatio: '1:1',
+            imageResizeTargetWidth: 200,
+            imageResizeTargetHeight: 200,
+            stylePanelLayout: 'compact circle',
+            styleLoadIndicatorPosition: 'center bottom',
+            styleButtonRemoveItemPosition: 'center bottom'
+        })
+
+        let file, form;
+        let fileChanged = false;
+
+        const inputElement = document.querySelector('input[type="file"]');
+        const pond = FilePond.create(inputElement, {
+            labelIdle: `Drag & Drop your picture or <span class="filepond--label-action">Browse</span>`,
+            onaddfile: (err, fileItem) => {
+                if (!err) {
+                    file = fileItem.getFileEncodeDataURL()
+                    fileChanged = true;
+                }
+            }
+        });
+
+        pond.addFile(profileImageUrl)
+
+        document.getElementById("submitForm").addEventListener("click", () => {
+
+            let filePondInput = document.getElementsByName('filepond')[0];
+            let fileInput = document.getElementsByName('file')[0];
+            let form = document.forms["editProfileForm"]
+
+            if (fileChanged) {
+                // form.append('csrfmiddlewaretoken', '{{ csrf_token }}')
+                jData = JSON.parse(filePondInput.value)
+                jData.data = file
+
+                fileInput.value = JSON.stringify(jData)
+            }
+            form.submit();
+        })
+    });
+</script>
+{% endblock %}

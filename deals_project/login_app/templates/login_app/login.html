@@ -1,0 +1,167 @@
+
+{% extends 'base.html' %}
+{% block title %}Login{% endblock title %}
+{% block content %} 
+<div class="quickButtons">
+    <div>
+        <span><a href="{% url 'login_app:request_password_reset' %}">Request Password Reset</a></span>
+    </div>
+</div>
+    
+<div class="main">
+    <div class="content">
+        <div class="loginContainer">
+            <form class="registerForm" id="frmLogin" action="{% url 'login_app:login' %}" method="POST">
+                {% csrf_token %}
+                <div class="heading">Login</div>
+                <div class="pairContainer">
+                    <div class="formPair">
+                        <label>Username<span class="asterisk">*</span></label>
+                        <div class="inputContainer">
+                            <input type="text" name="user" class="form-control">
+                        </div>
+                    </div>
+                    <div class="formPair">
+                        <label>Password<span class="asterisk">*</span></label>
+                        <div class="inputContainer">
+                            <input type="password" name="password" class="form-control">
+                        </div>
+                    </div>
+                </div>
+            </form>
+        
+        {% if error %}
+            {{ error }}
+        {% endif %}
+        </div>
+    </div>
+    <div class="submitForm">
+        <button id="savePost" form="frmLogin">Submit</button>
+    </div>
+</div>
+<style>
+
+    
+.quickButtons {
+    color:#4ED530;
+    height:4.5em;
+    align-items: center;
+    display: flex;
+    font-weight:500;
+    width: 60em;
+    margin: 0 auto;
+}
+
+.quickButtons span, .quickButtons i {
+    margin-right:.25em;
+    cursor:pointer;
+}
+
+.quickButtons div {
+    margin-right:2em;
+}
+
+.quickButtons a {
+    text-decoration: none;
+}
+
+.main {
+    flex-direction:row!important;
+    align-items:center;
+}
+
+a {
+    text-decoration:none;
+    color:unset;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+.content {
+    flex-grow: 1;
+    background:white;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    color: #545454;
+}
+
+.registerForm {
+    margin:2em;
+}
+
+.submitForm {
+    margin-left: 1em;
+    padding: 1em;
+    background: #4ED530;
+    color:white;
+    font-weight:500;
+}
+
+label {
+    display:flex;
+    font-size:1em;
+}
+
+.formPair {
+    display:flex;
+    flex-direction:column;
+    width:45%;
+    margin-top: 1em;
+}
+
+.formSingle {
+    margin-top:1em;
+}
+
+.heading {
+    font-size:1.5em;
+    color: #4ED530;
+}
+
+.content .asterisk {
+    color: #4ED530;
+}
+
+label {
+    margin:.5em 0;
+}
+
+.pairContainer {
+    display:flex;
+    flex-direction:row;
+    width:100%;
+    justify-content:space-between;
+}
+
+.inputContainer {
+    display:flex;
+    border:1px solid #dadada;
+    box-shadow: 0px 1px 5px 0px #DCDDDC;
+    padding:.5em;
+    border-radius:1em;
+}
+
+.inputContainer i {
+    color: #dadada;
+    margin-right:.5em;
+    display:flex;
+}
+
+.inputContainer input, .inputContainer textarea {
+    border: none;
+    font-weight:500;
+    color: #555454;
+    flex:1;
+}
+
+.inputContainer textarea {
+    height:20em;
+}
+
+.multiFiles {
+    margin-top:1em;
+}
+</style>
+
+{% endblock %}

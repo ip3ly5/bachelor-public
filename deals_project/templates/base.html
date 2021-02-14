@@ -1,0 +1,833 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>{% block title %}food4thought{% endblock %}</title>
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css"
+        integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,300;0,400;0,500;0,600;0,700;1,500&display=swap"
+        rel="stylesheet">
+    <link href="https://unpkg.com/filepond-plugin-image-preview/dist/filepond-plugin-image-preview.css"
+        rel="stylesheet">
+    <link href="{% static 'filepond.css' %}" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.0.0/mapbox-gl.js"></script>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.0.0/mapbox-gl.css" rel="stylesheet" />
+</head>
+
+<body style="visibility: hidden;">
+    <nav class="navContainer">
+        <div class="leftNav">
+            <a href="" class="logo">
+                <img src="{% static 'f4t.svg' %}" alt="Food4Thought">
+            </a>
+            <a class="{% if currentCategory == 'All' %} activeCategory {% endif %}"
+                href="{% url 'deals_app:base' 'all' %}">All</a>
+            <a class="{% if currentCategory == 'Our Picks' %} activeCategory {% endif %}"
+                href="{% url 'deals_app:base' 'our-picks' %}">Our Picks</a>
+            <div class="genericDropdown">
+                <a class="{% if currentCategory != 'All' and currentCategory != 'Our Picks' %} activeCategory {% endif %}"
+                    href="">
+                    <span>Categories</span>
+                    <i class="fa fa-angle-down" aria-hidden="true"></i>
+                </a>
+                <div class="genericDropdownContent">
+                    {% for category in categories %}
+                    <a class="genericDropdownItem {% ifequal category.name currentCategory %} activeCategory {% endifequal %}"
+                        href="{% url 'deals_app:base' category.slug %}">{{category.name}}</a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <div class="rightNav">
+            <div>
+                <div class="searchContainer">
+                    <i class="fas fa-search"></i>
+                    <input id="search-input" placeholder="Search all posts">
+                </div>
+                <div id="search-result-container" class="genericDropdownContent"></div>
+            </div>
+            {% if user.is_authenticated %}
+            <div id="right-nav-group">
+                <div id="notification-group">
+                    <label for="notification-icon" id="notification-label"></label>
+                    <i class="far fa-bell" id="notification-icon"></i>
+                    <div id="notification-counter"></div>
+                    <div id="notification-list"></div>
+                </div>
+                <div class="userDropdown">
+                    <a class="dropbtn" href="">
+                        <div class="profileImage">
+                            <img src="{{loggedProfileImage.url}}">
+                        </div>
+                        <span>{{user}}</span>
+                        <i class="fa fa-angle-down" aria-hidden="true"></i>
+                    </a>
+                    <div class="userDropdownContent">
+                        <a class="userDropdownItem" href="{% url 'profile_app:profile' user.id %}">Profile</a>
+                        <!-- <a class="userDropdownItem" href="">Chats</a> -->
+                        <a class="userDropdownItem" href="{% url 'login_app:edit_account' %}">Account settings</a>
+                        <a class="userDropdownItem" href="{% url 'login_app:logout' %}">Logout</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="navLinks">
+            <a class="navLink" href="{% url 'login_app:login' %}">Login</a>
+            <a class="navLink" href="{% url 'login_app:register' %}">Register</a>
+        </div>
+        </div>
+        {% endif %}
+    </nav>
+    <div class="messagesContainer">
+        {% if messages %}
+        {% for message in messages %}
+        <div class=" {{message.tags}} ">
+            {{message}}
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        {% if errors %}
+        {% for error in errors %}
+        <div class="error">
+            {{error}}
+        </div>
+        {% endfor %}
+        {% endif %}
+    </div>
+    {% block content %}
+    {% endblock %}
+    <!-- FilePond Stuff -->
+    <script src="{% static 'filepond.js' %}"></script>
+    <script src="{% static 'filepond-plugin-image-preview.js' %}"></script>
+    <script src="{% static 'filepond-plugin-image-crop.min.js' %}"></script>
+    <script src="{% static 'filepond-plugin-image-resize.min.js' %}"></script>
+    <script src="{% static 'filepond-plugin-file-validate-size.js' %}"></script>
+    <script src="{% static 'filepond-plugin-file-validate-type.js' %}"></script>
+    <script src="{% static 'filepond-plugin-image-transform.min.js' %}"></script>
+    <script src="{% static 'filepond-plugin-file-encode.js' %}"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', (event) => {
+            document.body.style.visibility = 'visible';
+            document.querySelector('#search-input').value = '';
+        });
+    </script>
+
+    {% if user.is_authenticated %}
+    <!-- Notification socket -->
+    <script>
+        const loc = window.location
+        let wsStart = "ws://"
+        if (loc.protocol == 'https:') {
+            wsStart = 'wss://'
+        }
+        let notifEndpoint = wsStart + loc.host + "/ws/notifier/"
+        console.log(notifEndpoint)
+
+        NotifierSocket = new WebSocket(notifEndpoint);
+
+        NotifierSocket.onopen = function (message) {
+            console.log("notif open", message);
+        }
+
+        NotifierSocket.onmessage = function (e) {
+            const jData = JSON.parse(e.data);
+            console.log(jData)
+            const jMessage = jData.data;
+            // initial unreads
+            if (jData.multi == true) {
+                jMessage.forEach(elem => {
+                    handleQuery(elem, jData.type)
+                });
+            }
+            // incomming
+            else {
+                handleQuery(jMessage[0], jData.type)
+                notifyMe(jMessage[0].user, responseType, jMessage[0].body)
+            }
+
+            counterDiv.innerHTML = counter;
+            if (counter != 0) {
+                const notifLabel = document.querySelector('#notification-group');
+                notifLabel.onmouseover = () => document.querySelector('#notification-list').style.cssText = "display: block";
+                notifLabel.onmouseout = () => document.querySelector('#notification-list').style.cssText = "display: none";
+            }
+        }
+
+        NotifierSocket.onerror = function (message) {
+            console.log("notif error", message);
+        }
+
+        NotifierSocket.onclose = function (message) {
+            console.log("notif close", message);
+        }
+
+        handleQuery = (e, type) => {
+            // creating new div for incomming comment
+            const element = document.createElement("div");
+            element.setAttribute("id", 'comment-' + e.id);
+
+            let rType = null;
+            if (type == 'comment') {
+                rType = e.is_quote == true ? ' replied on ' + e.post : ' commented on ' + e.post;
+            } else {
+                rType = ' ' + e.status + ' collection for'
+            }
+            responseType = rType
+
+            const stylable = document.createElement("span");
+            if (type == 'comment') {
+                stylable.setAttribute("class", 'notification-text-comment');
+            } else if (e.status == 'accepted') {
+                stylable.setAttribute("class", 'notification-text-accepted');
+            } else {
+                stylable.setAttribute("class", 'notification-text-cancelled');
+            }
+            const text = document.createTextNode(e.user + rType);
+            stylable.appendChild(text)
+
+            const linebreak = document.createElement('br');
+            stylable.appendChild(linebreak);
+
+            const stylable2 = document.createElement("span");
+            stylable2.setAttribute("class", 'notification-text2');
+            type == 'comment' ? stylable2.setAttribute("class", 'notification-text-comment-body') : null;
+            const text2 = document.createTextNode(e.body);
+            stylable2.appendChild(text2)
+
+            element.appendChild(stylable);
+            element.appendChild(stylable2);
+            document.querySelector('#notification-list').prepend(element);
+
+            // attaching event listener dynamically
+            element.onclick = () => {
+                counter -= 1
+                counterDiv.innerHTML = counter;
+                element.setAttribute("class", 'hidden')
+                // send back comment id to be updated in db
+                NotifierSocket.send(JSON.stringify({
+                    'id': e.id,
+                    'type': type,
+                    'status': type == 'frozen_status' ? e.status : null,
+                }));
+                const postURL = "/post/" + e.slug
+                location.href = postURL + "#body-" + e.id;
+            }
+            counter += 1
+        }
+
+        // Counter
+        let counter = 0;
+        const counterDiv = document.querySelector('#notification-counter') || null;
+        if (counterDiv != null) {
+            counterDiv.innerHTML = counter;
+        }
+
+        // Desktop notifications
+        let responseType = null
+        function notifyMe(user, type, msg) {
+            // Let's check if the browser supports notifications
+            if (!("Notification" in window)) {
+                alert("This browser does not support desktop notification");
+            }
+
+            // Let's check whether notification permissions have already been granted
+            else if (Notification.permission === "granted") {
+                // If it's okay let's create a notification
+                var notification = new Notification(user + ' ' + type, { body: msg });
+            }
+
+            // Otherwise, we need to ask the user for permission
+            else if (Notification.permission !== "denied") {
+                Notification.requestPermission().then(function (permission) {
+                    // If the user accepts, let's create a notification
+                    if (permission === "granted") {
+                        var notification = new Notification(user + ' ' + type, { body: msg });
+                    }
+                });
+            }
+        }
+    </script>
+    {% endif %}
+
+    <script>
+        // Search socket
+        let searchEndpoint = (location.protocol == 'https:' ? 'wss://' : 'ws://') + location.host + "/ws/search/"
+        searchSocket = new WebSocket(searchEndpoint);
+
+        const searchInputDom = document.querySelector('#search-input');
+        const resultsContainer = document.querySelector('#search-result-container');
+        let search = searchInputDom.value;
+
+        searchInputDom.onkeyup = function (e) { // alt: #search-submit .onclick
+            search = searchInputDom.value;
+            ////// SANITIZE INPUT !!!!
+            if (search == '' || e.keyCode === 27) { // 27 = escape
+                clearResults();
+            }
+            else {
+                resultsContainer.style.cssText = "display: flex";
+                searchSocket.send(JSON.stringify({
+                    'search': search
+                }));
+            }
+        };
+
+        searchSocket.onopen = function (message) {
+            console.log("search open", message);
+        }
+
+        searchSocket.onmessage = function (e) {
+            //console.log(e)
+            const jData = JSON.parse(e.data);
+            let resultCount = 0
+
+            resultsContainer.innerHTML = ''
+            resultsContainer.insertAdjacentHTML("afterbegin",
+                `<div id="search-result-menu">
+                    <div id="search-result-info"><span id="resultCount">No </span> results found for: ${search}</div>
+                    <button onclick="clearResults()">Clear <i class="fas fa-times-circle"></i></botton>
+                </div>`
+            );
+            jData.forEach(elem => {
+                document.querySelector('#resultCount').innerHTML = resultCount += 1;
+                const jUsername = elem.username;
+                const jCommentCount = elem.commentCount
+                const jPostCode = elem.areaCode
+                const jCategory = elem.category
+                const jPost = JSON.parse(elem.data)[0].fields
+                //console.log(data)
+                resultsContainer.insertAdjacentHTML("beforeend",
+                    `<a href="/post/${jPost.slug}">
+                        <div class="search-item">
+                            <div class="search-image postImage">
+                                <img src="/media/${jPost.thumbnail}">
+                            </div>
+                            <div class="search-left">
+                                <div class="postTitle searchTitle">${jPost.title}</div>
+                                <div class="postSecondaryDetails">
+                                    <div class="postAuthor">${jUsername}</div>
+                                    <div class="postTimestamp">Posted: ${jPost.date_created}</div>
+                                    <div class="postExpiredDate">Pickup date: ${jPost.expiration_date}</div>
+                                </div>
+                            </div>
+                            <div class="search-right">
+                                <div class="postCategory postTag">${jCategory}</div>
+                                <div class="postPostcode postTag areacode">${jPostCode}</div>
+                            </div>
+                        </div>
+                    </a>`
+                );
+            });
+
+        }
+
+        searchSocket.onerror = function (message) {
+            console.log("search error", message);
+        }
+
+        searchSocket.onclose = function (message) {
+            console.log("search close", message);
+        }
+
+        function clearResults() {
+            resultsContainer.style.cssText = "display: none";
+            searchInputDom.value = '';
+        }
+    </script>
+</body>
+
+</html>
+
+<style>
+    * {
+        font-family: 'Rubik', sans-serif;
+    }
+
+    body {
+        display: flex;
+        flex-direction: column;
+    }
+
+    a,
+    a:hover {
+        text-decoration: none;
+    }
+
+    button {
+        background: none;
+        color: inherit;
+        border: none;
+        padding: 0;
+        font: inherit;
+        cursor: pointer;
+        outline: inherit;
+    }
+
+    .main {
+        width: 60em;
+        margin: 0 auto;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .navContainer {
+        font-weight: 500;
+        color: #555454;
+        display: flex;
+        justify-content: space-around;
+        width: 100%;
+        background-color: white;
+        box-shadow: 2px 5px 15px 0px #DCDDDC;
+        padding: .5em 0;
+        align-items: center;
+        height: 4em;
+    }
+
+    .navContainer a {
+        text-decoration: none;
+        color: #646464;
+    }
+
+    .navContainer a:visited {
+        color: #646464;
+    }
+
+    .leftNav {
+        display: flex;
+        align-items: center;
+        width: 40%;
+        justify-content: space-around;
+    }
+
+    .categoriesBtn {
+        justify-content: space-between;
+    }
+
+    .rightNav {
+        display: flex;
+        align-items: center;
+        width: 60%;
+        justify-content: space-around;
+    }
+
+    #right-nav-group {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        column-gap: 2em;
+    }
+
+    .success,
+    .error {
+        display: flex;
+        width: 100%;
+        background: #93EF72;
+        color: white;
+        position: absolute;
+        justify-content: center;
+        animation: fadein 2s forwards;
+    }
+
+    .error {
+        background: #ef7272;
+    }
+
+    @keyframes fadein {
+        from {
+            opacity: 0;
+            padding: 0;
+        }
+
+        to {
+            opacity: 1;
+            padding: .25em 0;
+        }
+    }
+
+    .messagesContainer {
+        position: relative;
+        z-index: 9999;
+        pointer-events: none;
+        animation: fadeout 2s forwards;
+        animation-delay: 5s;
+    }
+
+    @keyframes fadeout {
+        from {
+            opacity: 1
+        }
+
+        to {
+            opacity: 0;
+        }
+    }
+
+    body {
+        background: #F8F7F7;
+        width: 100%;
+        height: 100%;
+        padding: 0;
+        margin: 0;
+    }
+
+    .logo img {
+        height: 3em;
+    }
+
+    .searchContainer {
+        display: flex;
+        border: 1px solid #dadada;
+        box-shadow: 0px 1px 5px 0px #DCDDDC;
+        padding: .5em;
+        border-radius: 1em;
+        width: 100%;
+        align-items: center;
+    }
+
+    .searchContainer i {
+        color: #dadada;
+        margin-right: .5em;
+        display: flex;
+    }
+
+    .searchContainer input {
+        border: none;
+        font-weight: 500;
+        color: #555454;
+        flex: 1;
+    }
+
+    .navLinks a {
+        margin: 0 .5em;
+    }
+
+    .genericDropdown {
+        position: relative;
+        display: inline-block;
+    }
+
+    .genericDropdown:hover .genericDropdownContent {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .genericDropdownContent {
+        display: none;
+        position: absolute;
+        background: #F8F9FA;
+        min-width: 25em;
+        box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+        z-index: 1;
+        padding: 1em;
+    }
+
+    .genericDropdownItem {
+        display: flex;
+        justify-content: space-evenly;
+        margin: .5em;
+    }
+
+    .userDropdown {
+        position: relative;
+        display: inline-block;
+    }
+
+    .userDropdownContent {
+        display: none;
+        position: absolute;
+        background: #F8F9FA;
+        min-width: 160px;
+        box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+        z-index: 1;
+    }
+
+    .userDropdownContent a {
+        padding: 12px 16px;
+        display: block;
+    }
+
+    .userDropdownContent a:hover {
+        background-color: #f1f1f1
+    }
+
+    .userDropdown:hover .userDropdownContent {
+        display: block;
+    }
+
+    .userDropdown:hover .dropbtn {
+        background-color: white;
+    }
+
+    .dropbtn {
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+    }
+
+    .dropbtn span {
+        margin: 0 .2em 0 1em;
+    }
+
+    .dropbtn img {
+        height: 100%;
+        overflow: hidden;
+        border-radius: 50%;
+    }
+
+    .profileImage:before {
+        content: "";
+        display: block;
+        padding-top: 100%;
+    }
+
+    .profileImage {
+        position: relative;
+        width: 3em;
+        overflow: hidden;
+        border-radius: 50%;
+    }
+
+    .profileImage img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        object-fit: cover;
+        width: 100%;
+    }
+
+    #notification-list {
+        position: absolute;
+        z-index: 1;
+        background: #F8F9FA;
+        padding: 1em;
+        max-height: 15em;
+        overflow-y: auto;
+        width: 15em;
+        overflow-x: hidden;
+        display: none;
+        box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+    }
+
+
+    /*     #notification-group:hover #notification-list {
+        display: block;
+    } */
+
+    #notification-group {
+        text-align: center;
+    }
+
+    #notification-icon {
+        font-size: 1.2em;
+    }
+
+    #notification-list>div {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        border-bottom: 1px solid #e1e1e1;
+        padding: 0.5em 0;
+        cursor: pointer;
+        text-align: left;
+    }
+
+    #notification-list>div:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+
+    #notification-list>div:first-child {
+        padding-top: 0;
+    }
+
+    #notification-counter {
+        color: #4ED530;
+    }
+
+    #notification-label {
+        width: 5em;
+        height: 2.5em;
+        display: block;
+        position: absolute;
+        cursor: pointer;
+    }
+
+    #search-result-menu {
+        display: flex;
+        justify-content: space-between;
+    }
+
+    #search-result-menu>button {
+        color: #4ED530;
+    }
+
+    #search-result-container {
+        display: none;
+        row-gap: 0.5em;
+        flex-direction: column;
+        max-height: 20em;
+        overflow-y: auto;
+    }
+
+    #search-result-container a:last-child {
+        padding-bottom: 1em;
+    }
+
+    .postImage.search-image img {
+        height: 4em;
+        width: 4em;
+    }
+
+    .search-item {
+        display: flex;
+        column-gap: 1em;
+        box-shadow: 0px 0px 5px 0px rgba(0, 0, 0, 0.1);
+        padding: 0.2em;
+        cursor: pointer;
+    }
+
+    .postTitle.searchTitle {
+        margin-bottom: .1em;
+        overflow: hidden;
+        width: 10em;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .postSecondaryDetails {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .search-left {
+        max-width: 20em;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    .search-right {
+        display: flex;
+        flex-direction: column;
+        row-gap: 0.3em;
+        justify-content: center;
+        margin-left: auto;
+        align-items: end;
+    }
+
+    .search-right>div {
+        width: max-content;
+        color: #fff;
+    }
+
+    .submitForm {
+        margin-left: 1em;
+        padding: 1em;
+        background: #4ED530;
+        color: white;
+        font-weight: 500;
+        cursor: pointer;
+        width: max-content;
+    }
+
+    .submitForm.small {
+        padding: 0.5em;
+        margin-left: 0;
+        font-size: 0.9em;
+    }
+
+    .hidden {
+        display: none;
+    }
+
+    .visable {
+        display: initial;
+    }
+
+    .visable-flex {
+        display: flex;
+    }
+
+    .postTag {
+        background-color: #447727;
+        padding: .5em;
+        color: white;
+        text-align: center;
+        font-weight: 500;
+        font-size: 0.8em;
+        white-space: nowrap;
+        margin: 0 .5em;
+    }
+
+    .areacode {
+        background: #65659d;
+    }
+
+    .postImage img {
+        height: 8em;
+        width: 8em;
+        object-fit: contain;
+    }
+
+    .postTimestamp,
+    .postExpiredDate,
+    .postAuthor,
+    .postPostcode {
+        color: #9D9D9C;
+        font-size: 0.7em;
+        font-weight: 500;
+    }
+
+    .postAuthor a {
+        color: #4ED530;
+    }
+
+    .postAuthor a:hover {
+        text-decoration: underline;
+    }
+
+    .sub-header-container {
+        margin-top: 2em;
+    }
+
+    .form-input-1 {
+        width: 20em;
+    }
+
+    .line-2 {
+        border-bottom: 1px solid #bdbdbd;
+        margin: 2em 0 1em;
+    }
+
+    .row-space-1 {
+        row-gap: 0.5em;
+    }
+
+    .notification-text-comment,
+    .notification-text-accepted,
+    .notification-text-cancelled {
+        font-size: 0.8em;
+    }
+
+    .notification-text-accepted {
+        color: #4ED530;
+    }
+
+    .notification-text-cancelled {
+        color: #ef7272;
+    }
+
+    .notification-text-comment-body {
+        font-size: 0.9em;
+        opacity: 0.6;
+        font-style: italic;
+    }
+</style>
